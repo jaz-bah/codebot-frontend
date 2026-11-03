@@ -1,36 +1,44 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Codebot — Frontend
 
-## Getting Started
+Next.js 16.4.2 (App Router, Turbopack, Cache Components) + Tailwind v4 +
+shadcn v4 UI. The SaaS workspace app: auth, dashboard CRUD features (todos,
+notes, files, components, presets, experts, tools, IDE snippets, posts,
+chat), global search, commands/MVC cheat sheets, code & rich-text editors.
 
-First, run the development server:
+> **LIVE:** https://codebotapp.vercel.app · API: https://codebot-backend-aued.onrender.com
+
+## Repos & hosting
+
+| Piece | Repo | Host |
+|---|---|---|
+| Frontend | `jaz-bah/codebot-frontend` (this repo) | Vercel |
+| Backend (NestJS + BetterAuth + TypeORM + Socket.IO) | `jaz-bah/codebot-backend` | Render (long-running service — Socket.IO needs it, serverless can't host it) |
+| Database | Neon PostgreSQL (pooled, SSL) | Neon |
+
+## Environment
+
+One knob drives every backend URL (auth, REST, chat socket): see
+`src/lib/auth-client.ts` → `API_URL` from `NEXT_PUBLIC_API_URL`.
+
+- Dev: `.env` → `NEXT_PUBLIC_API_URL=http://localhost:3000` (backend on
+  :3000, frontend dev server on :3001).
+- Prod: `.env.production` → `NEXT_PUBLIC_API_URL=https://codebot-backend-aued.onrender.com`.
+  **`NEXT_PUBLIC_*` vars are inlined at build time** — the same value must
+  also be set in the Vercel project env vars; redeploy after changing it.
+- `.env*` files are gitignored — never commit real URLs/secrets.
+
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm ci
+npm run dev      # http://localhost:3001 (backend owns :3000)
+npm run build    # production build (loads .env.production)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Project docs
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `Brain/` — LOG (chronological), MEMORY (decisions/gotchas), RUNBOOK
+  (auth integration guide), TASKS, DESIGN (design system), MVC,
+  api-guide/ (per-feature backend API contracts).
+- `frontend-app/AGENTS.md` — Next.js version rules + TanStack Query
+  conventions (all remote reads via useQuery, writes via useMutation).
