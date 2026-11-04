@@ -168,8 +168,15 @@ export function AppSidebar({
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     isActive={
+                      // Exact match always wins. Prefix matching is skipped for
+                      // the dashboard root ("/dashboard"), which is a prefix of
+                      // every other item's href and would highlight it on
+                      // every subpage, and for section toggles (Commands/MVC):
+                      // only the sub-item highlights on a child page.
                       pathname === item.href ||
-                      pathname.startsWith(item.href + "/")
+                      (!item.sub &&
+                        item.href !== ROUTES.dashboard.root &&
+                        pathname.startsWith(item.href + "/"))
                     }
                     tooltip={item.title}
                     onClick={
@@ -252,7 +259,6 @@ export function AppSidebar({
                 <DropdownMenuItem variant="destructive" onClick={async () => {
                   // Full reload on purpose: clears all cached session state.
                   await authClient.signOut()
-                  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
                   window.location.href = ROUTES.auth.signIn
                 }}>
                   <LogOut />

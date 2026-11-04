@@ -35,11 +35,11 @@ const CodeEditor = dynamic(
   () => import("@/components/code-editor").then((m) => m.CodeEditor),
   {
     ssr: false,
-    /* Same footprint as the loaded editor: fixed 260px, full-bleed. */
+    /* Same footprint as the loaded editor: fixed 200px, full-bleed. */
     loading: () => (
       <div
         aria-hidden
-        className="-mx-4 -mb-4 h-[260px] animate-pulse rounded-none border-y bg-muted/40"
+        className="-mx-4 -mb-4 h-[200px] animate-pulse rounded-none border-y bg-muted/40"
       />
     ),
   }
@@ -52,21 +52,22 @@ const CodeEditor = dynamic(
 type KindMeta = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
-  /** Card's left accent edge (see `todo-card.tsx`'s border-left pattern). */
-  accent: string;
+  /** Kind-chip icon tint; the label itself stays muted so one color
+   *  accent per card survives next to the vote button. */
+  tint: string;
 };
 
 const KIND_META: Record<PostResourceType, KindMeta> = {
-  todo: { label: "Todo", icon: ListTodo, accent: "border-l-amber-500" },
-  note: { label: "Note", icon: NotepadText, accent: "border-l-blue-500" },
+  todo: { label: "Todo", icon: ListTodo, tint: "text-amber-600 dark:text-amber-400" },
+  note: { label: "Note", icon: NotepadText, tint: "text-blue-600 dark:text-blue-400" },
   component: {
     label: "Component",
     icon: LayoutGrid,
-    accent: "border-l-violet-500",
+    tint: "text-violet-600 dark:text-violet-400",
   },
-  preset: { label: "Preset", icon: FileCode, accent: "border-l-emerald-500" },
-  tool: { label: "Tool", icon: Wrench, accent: "border-l-orange-500" },
-  snippet: { label: "IDE snippet", icon: FileCode, accent: "border-l-cyan-500" },
+  preset: { label: "Preset", icon: FileCode, tint: "text-emerald-600 dark:text-emerald-400" },
+  tool: { label: "Tool", icon: Wrench, tint: "text-orange-600 dark:text-orange-400" },
+  snippet: { label: "IDE snippet", icon: FileCode, tint: "text-cyan-600 dark:text-cyan-400" },
 };
 
 /* ------------------------------------------------------------------ */
@@ -99,6 +100,14 @@ export function PostCard({ post }: { post: Post }) {
       | { message?: string }
       | null;
 
+  /* A dropped connection surfaces as the bare "Failed to fetch"; say what
+   * actually happened instead of echoing the transport error. */
+  const voteErrorMessage = voteError?.message
+    ? /fetch|network/i.test(voteError.message)
+      ? "Couldn't reach the server. Check your connection and try again."
+      : voteError.message
+    : undefined;
+
   const toggleVote = () => {
     if (isBusy) return;
     if (post.hasVoted) {
@@ -115,7 +124,7 @@ export function PostCard({ post }: { post: Post }) {
       isPending={isBusy}
       postTitle={post.title}
       onToggle={toggleVote}
-      errorTitle={voteError?.message}
+      errorTitle={voteErrorMessage}
     />
   );
 
@@ -123,16 +132,30 @@ export function PostCard({ post }: { post: Post }) {
     case "preset":
     case "snippet":
       return (
-        <CodePostCard post={post} vote={vote} voteError={voteError?.message} />
+        <CodePostCard post={post} vote={vote} voteError={voteErrorMessage} />
       );
     case "component":
       return (
-        <ComponentPostCard post={post} vote={vote} voteError={voteError?.message} />
+        <ComponentPostCard post={post} vote={vote} voteError={voteErrorMessage} />
       );
     /* Todos, notes and tools keep their accent-edged feed card. */
     default:
-      return <KindPostCard post={post} vote={vote} voteError={voteError?.message} />;
+      return <KindPostCard post={post} vote={vote} voteError={voteErrorMessage} />;
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Kind chip — the one per-card kind signal (icon tint + muted pill)   */
+/* ------------------------------------------------------------------ */
+
+function KindChip({ kind }: { kind: PostResourceType }) {
+  const meta = KIND_META[kind];
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/60 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+      <meta.icon className={cn("size-3.5", meta.tint)} aria-hidden />
+      {meta.label}
+    </span>
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -228,7 +251,7 @@ function CodePostCard({
         readOnly
         placeholder="No description."
         label={`${post.title} code`}
-        height="260px"
+        height="200px"
         className="-mx-4 -mb-4 rounded-none border-0 shadow-none focus-within:ring-0"
       />
     </SectionCard>
@@ -273,7 +296,10 @@ function ComponentPostCard({
             aria-label="No preview available"
             className="grid aspect-video place-items-center bg-muted text-muted-foreground"
           >
-            <ImageOff aria-hidden className="size-6" />
+            <span className="flex flex-col items-center gap-1.5 text-xs">
+              <ImageOff aria-hidden className="size-6" />
+              No preview
+            </span>
           </div>
         )
       }
@@ -284,7 +310,7 @@ function ComponentPostCard({
         </div>
       }
     >
-      <VoteError message={voteError} />
+      {voteError && <VoteError message={voteError} />}
     </SectionCard>
   );
 }
@@ -302,14 +328,7 @@ function KindPostCard({
   vote: React.ReactNode;
   voteError?: string;
 }) {
-  const meta = KIND_META[post.resourceType];
   const authorName = post.author.name || post.author.username;
-  const initials = authorName
-    .split(" ")
-    .map((part) => part[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
   const date = new Date(post.createdAt).toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
@@ -318,41 +337,25 @@ function KindPostCard({
   return (
     <SectionCard
       size="sm"
-      className={cn(
-        "h-full border-l-4 transition-colors duration-200",
-        meta.accent
-      )}
+      className="h-full"
       title={<span className="line-clamp-2">{post.title}</span>}
       description={
-        <span className="truncate">
-          by {authorName} · <span className="lowercase">{meta.label}</span>
-        </span>
+        <span className="truncate">by {authorName}</span>
       }
       action={vote}
       footer={
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span
-              aria-hidden
-              className={cn(
-                "grid size-6 shrink-0 place-items-center rounded-full text-[0.65rem] font-semibold text-white",
-                meta.accent.replace("border-l-", "bg-")
-              )}
-            >
-              {initials}
-            </span>
-            <span className="truncate text-xs text-muted-foreground">
-              {date}
-            </span>
-          </div>
-          <span className="flex items-center gap-1 text-xs text-muted-foreground">
-            <meta.icon className="size-3.5" />
-            {meta.label}
-          </span>
+        <div className="flex w-full items-center justify-between gap-2">
+          <KindChip kind={post.resourceType} />
+          <time
+            dateTime={post.createdAt}
+            className="shrink-0 text-xs text-muted-foreground"
+          >
+            {date}
+          </time>
         </div>
       }
     >
-      <VoteError message={voteError} />
+      {voteError ? <VoteError message={voteError} /> : null}
       <PostBody post={post} />
     </SectionCard>
   );

@@ -15,11 +15,3 @@ export const PRIORITY_STYLES: Record<TodoPriority, string> = {
   high: "bg-amber-500/15 text-amber-700 dark:text-amber-500",
   urgent: "bg-red-500/15 text-red-700 dark:text-red-500",
 };
-
-/** Accent colors for the card's left priority stripe. */
-export const PRIORITY_ACCENTS: Record<TodoPriority, string> = {
-  low: "border-l-muted-foreground/30",
-  medium: "border-l-blue-500/60",
-  high: "border-l-amber-500/70",
-  urgent: "border-l-red-500/80",
-};

@@ -16,10 +16,33 @@ import { createAuthClient } from "better-auth/react"
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000"
 
+/** Abort an auth request after this long, so an unreachable API can't
+ *  leave a form stuck on "Signing in…" forever. */
+const AUTH_REQUEST_TIMEOUT_MS = 15_000
+
+const anySignal = (
+  AbortSignal as unknown as {
+    any?: (signals: AbortSignal[]) => AbortSignal
+  }
+).any
+
+/** fetch with a hard deadline; keeps a caller-provided signal usable when
+ *  the runtime supports `AbortSignal.any`. */
+const boundedFetch: typeof fetch = (input, init) => {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), AUTH_REQUEST_TIMEOUT_MS)
+  const signal =
+    init?.signal && anySignal
+      ? anySignal([init.signal, controller.signal])
+      : controller.signal
+  return fetch(input, { ...init, signal }).finally(() => clearTimeout(timer))
+}
+
 export const authClient = createAuthClient({
   baseURL: `${API_URL}/api/auth`,
   fetchOptions: {
     credentials: "include",
+    customFetchImpl: boundedFetch,
   },
   // Must mirror the server `username({ displayUsername: false })` plugin
   // (better-auth.instance.ts) so the `username` field is settable via

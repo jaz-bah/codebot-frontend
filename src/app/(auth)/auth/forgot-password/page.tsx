@@ -1,10 +1,9 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
 import { Loader2 } from "lucide-react"
 
-import { AuthCard, AuthError, errorMessage } from "@/components/auth/auth-card"
+import { AuthCard, AuthError, AuthLink, errorMessage } from "@/components/auth/auth-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,18 +19,23 @@ export default function ForgotPasswordPage() {
     event.preventDefault()
     setError("")
     setPending(true)
-    const { error: authError } = await authClient.requestPasswordReset({
-      email,
-      // Runbook: mail link GET redirects to this page with ?token=...
-      redirectTo: `${window.location.origin}/auth/reset-password`,
-    })
-    setPending(false)
-    if (authError) {
-      setError(errorMessage(authError))
-      return
+    try {
+      const { error: authError } = await authClient.requestPasswordReset({
+        email,
+        // Runbook: mail link GET redirects to this page with ?token=...
+        redirectTo: `${window.location.origin}/auth/reset-password`,
+      })
+      if (authError) {
+        setError(errorMessage(authError))
+        return
+      }
+      // Runbook §3.4: always 200 for unknown emails — show generic confirmation.
+      setSent(true)
+    } catch (caught) {
+      setError(errorMessage(caught))
+    } finally {
+      setPending(false)
     }
-    // Runbook §3.4: always 200 for unknown emails — show generic confirmation.
-    setSent(true)
   }
 
   return (
@@ -50,12 +54,7 @@ export default function ForgotPasswordPage() {
             link is on its way. The link is valid for one hour.
           </p>
           <p className="text-center text-sm text-muted-foreground">
-            <Link
-              href="/auth/sign-in"
-              className="text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
-            >
-              Back to sign in
-            </Link>
+            <AuthLink href="/auth/sign-in">Back to sign in</AuthLink>
           </p>
         </div>
       ) : (
@@ -65,24 +64,21 @@ export default function ForgotPasswordPage() {
             <Input
               id="email"
               type="email"
+              placeholder="you@example.com"
               autoComplete="email"
+              autoFocus
               required
               value={email}
               onChange={(event) => setEmail(event.target.value)}
             />
           </div>
           {error && <AuthError message={error} />}
-          <Button type="submit" size="lg" disabled={pending}>
+          <Button type="submit" size="lg" disabled={pending} className="mt-1 h-10">
             {pending && <Loader2 className="animate-spin" />}
-            Send reset link
+            {pending ? "Sending…" : "Send reset link"}
           </Button>
           <p className="text-center text-sm text-muted-foreground">
-            <Link
-              href="/auth/sign-in"
-              className="text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
-            >
-              Back to sign in
-            </Link>
+            <AuthLink href="/auth/sign-in">Back to sign in</AuthLink>
           </p>
         </form>
       )}

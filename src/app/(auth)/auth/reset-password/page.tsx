@@ -1,11 +1,10 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Loader2 } from "lucide-react"
 
-import { AuthCard, AuthError, errorMessage } from "@/components/auth/auth-card"
+import { AuthCard, AuthError, AuthLink, errorMessage } from "@/components/auth/auth-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -35,18 +34,23 @@ function ResetPasswordForm() {
       return
     }
     setPending(true)
-    const { error: authError } = await authClient.resetPassword({
-      newPassword: password,
-      token,
-    })
-    setPending(false)
-    if (authError) {
-      setError(errorMessage(authError))
-      return
+    try {
+      const { error: authError } = await authClient.resetPassword({
+        newPassword: password,
+        token,
+      })
+      if (authError) {
+        setError(errorMessage(authError))
+        return
+      }
+      // Runbook: all existing sessions are revoked on success.
+      setDone(true)
+      router.replace("/auth/sign-in")
+    } catch (caught) {
+      setError(errorMessage(caught))
+    } finally {
+      setPending(false)
     }
-    // Runbook: all existing sessions are revoked on success.
-    setDone(true)
-    router.replace("/auth/sign-in")
   }
 
   if (!token) {
@@ -55,12 +59,9 @@ function ResetPasswordForm() {
         title="Reset password"
         description="This reset link is missing its token. Request a fresh link and open it from your email."
       >
-        <Link
-          href="/auth/forgot-password"
-          className="text-center text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
-        >
+        <AuthLink href="/auth/forgot-password" className="text-center text-sm">
           Request a new reset link
-        </Link>
+        </AuthLink>
       </AuthCard>
     )
   }
@@ -77,6 +78,7 @@ function ResetPasswordForm() {
             id="password"
             type="password"
             autoComplete="new-password"
+            autoFocus
             required
             value={password}
             onChange={(event) => setPassword(event.target.value)}
@@ -94,9 +96,14 @@ function ResetPasswordForm() {
           />
         </div>
         {error && <AuthError message={error} />}
-        <Button type="submit" size="lg" disabled={pending || done}>
+        <Button
+          type="submit"
+          size="lg"
+          disabled={pending || done}
+          className="mt-1 h-10"
+        >
           {(pending || done) && <Loader2 className="animate-spin" />}
-          {done ? "Password reset" : "Reset password"}
+          {done ? "Password reset" : pending ? "Resetting…" : "Reset password"}
         </Button>
       </form>
     </AuthCard>

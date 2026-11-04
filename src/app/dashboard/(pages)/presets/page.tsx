@@ -176,6 +176,12 @@ function PresetCard({
       title={preset.name}
       action={
         <div className="flex items-center gap-1" aria-label="Preset actions">
+          <span
+            className="mr-1 rounded-md bg-muted px-1.5 py-0.5 text-[11px] font-medium tracking-wide text-muted-foreground"
+            aria-label={`Language: ${preset.language}`}
+          >
+            {preset.language}
+          </span>
           <Button
             variant="ghost"
             size="icon-xs"
@@ -218,7 +224,8 @@ function PresetCard({
         defaultValue={preset.data}
         readOnly
         label={`${preset.name} code`}
-        height="260px"
+        /* Editor snug to the code so short presets don't render as a void. */
+        height={`${Math.min(Math.max(preset.data.split("\n").length * 21 + 32, 140), 320)}px`}
         className="-mx-4 -mb-4 rounded-none border-0 shadow-none focus-within:ring-0"
       />
     </SectionCard>

@@ -77,7 +77,7 @@ export default function ProfilePage() {
   return (
     <Section
       title="Profile"
-      description="Your handle across the platform plus live counts over everything you've created. Counts are recomputed on every request — they can never drift."
+      description="Your handle across the platform plus live counts over everything you've made."
       columns={1}
     >
       <IdentityCard profile={data} />

@@ -22,16 +22,21 @@ function VerifyEmailNotice() {
   async function resend() {
     setError("")
     setPending(true)
-    const { error: authError } = await authClient.sendVerificationEmail({
-      email,
-      callbackURL: `${window.location.origin}/auth/sign-in`,
-    })
-    setPending(false)
-    if (authError) {
-      setError(errorMessage(authError))
-      return
+    try {
+      const { error: authError } = await authClient.sendVerificationEmail({
+        email,
+        callbackURL: `${window.location.origin}/auth/sign-in`,
+      })
+      if (authError) {
+        setError(errorMessage(authError))
+        return
+      }
+      setSent(true)
+    } catch (caught) {
+      setError(errorMessage(caught))
+    } finally {
+      setPending(false)
     }
-    setSent(true)
   }
 
   return (
@@ -51,12 +56,19 @@ function VerifyEmailNotice() {
         />
       </div>
       {error && <AuthError message={error} />}
-      <Button type="button" onClick={resend} disabled={pending || !email}>
+      <Button
+        type="button"
+        onClick={resend}
+        disabled={pending || !email}
+        className="h-10"
+      >
         {pending && <Loader2 className="animate-spin" />}
         {sent ? "Sent again" : "Resend verification email"}
       </Button>
       {sent && (
-        <p className="text-sm text-muted-foreground">Verification email sent.</p>
+        <p role="status" className="text-sm text-muted-foreground">
+          Verification email sent.
+        </p>
       )}
     </AuthCard>
   )

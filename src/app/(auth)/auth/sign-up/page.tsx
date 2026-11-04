@@ -1,10 +1,9 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/link"
 import { Loader2 } from "lucide-react"
 
-import { AuthCard, AuthError, errorMessage } from "@/components/auth/auth-card"
+import { AuthCard, AuthError, AuthLink, AuthSocialButtons, errorMessage } from "@/components/auth/auth-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -19,43 +18,54 @@ export default function SignUpPage() {
   const [socialPending, setSocialPending] = React.useState<string | null>(null)
   const [error, setError] = React.useState("")
   const [checkInbox, setCheckInbox] = React.useState(false)
+  const [resent, setResent] = React.useState(false)
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault()
     setError("")
     setPending(true)
-    // Runbook §3.1: sign-up issues NO session; a verification mail goes out.
-    const { error: authError } = await authClient.signUp.email({
-      name,
-      email,
-      password,
-      // After the verify-email link is clicked, BetterAuth redirects here.
-      // Must be an ABSOLUTE frontend URL — a relative value ("/" by default)
-      // resolves against the BACKEND origin (NestJS root → 404 Cannot GET /).
-      callbackURL: `${window.location.origin}/auth/sign-in`,
-    })
-    setPending(false)
-    if (authError) {
-      setError(errorMessage(authError))
-      return
+    try {
+      // Runbook §3.1: sign-up issues NO session; a verification mail goes out.
+      const { error: authError } = await authClient.signUp.email({
+        name,
+        email,
+        password,
+        // After the verify-email link is clicked, BetterAuth redirects here.
+        // Must be an ABSOLUTE frontend URL — a relative value ("/" by default)
+        // resolves against the BACKEND origin (NestJS root → 404 Cannot GET /).
+        callbackURL: `${window.location.origin}/auth/sign-in`,
+      })
+      if (authError) {
+        setError(errorMessage(authError))
+        return
+      }
+      setCheckInbox(true)
+    } catch (caught) {
+      setError(errorMessage(caught))
+    } finally {
+      setPending(false)
     }
-    setCheckInbox(true)
   }
 
   async function onSocial(provider: "google" | "github") {
     setError("")
     setSocialPending(provider)
-    const { data, error: authError } = await authClient.signIn.social({
-      provider,
-      callbackURL: "/dashboard",
-    })
-    setSocialPending(null)
-    if (authError) {
-      setError(errorMessage(authError))
-      return
-    }
-    if (data?.redirect && data.url) {
-      window.location.href = data.url
+    try {
+      const { data, error: authError } = await authClient.signIn.social({
+        provider,
+        callbackURL: "/dashboard",
+      })
+      if (authError) {
+        setError(errorMessage(authError))
+        return
+      }
+      if (data?.redirect && data.url) {
+        window.location.href = data.url
+      }
+    } catch (caught) {
+      setError(errorMessage(caught))
+    } finally {
+      setSocialPending(null)
     }
   }
 
@@ -68,26 +78,33 @@ export default function SignUpPage() {
         description={`We sent a verification link to ${email}. Open it to activate your account — you'll be signed in automatically.`}
       >
         {error && <AuthError message={error} />}
+        {resent && (
+          <p role="status" className="text-sm text-muted-foreground">
+            Verification email sent.
+          </p>
+        )}
         <Button
           variant="outline"
           type="button"
+          className="h-10"
           onClick={async () => {
-            await authClient.sendVerificationEmail({
-              email,
-              callbackURL: `${window.location.origin}/auth/sign-in`,
-            })
+            setError("")
+            setResent(false)
+            try {
+              await authClient.sendVerificationEmail({
+                email,
+                callbackURL: `${window.location.origin}/auth/sign-in`,
+              })
+              setResent(true)
+            } catch (caught) {
+              setError(errorMessage(caught))
+            }
           }}
         >
           Resend verification email
         </Button>
         <p className="text-center text-sm text-muted-foreground">
-          Already verified?{" "}
-          <Link
-            href="/auth/sign-in"
-            className="text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
-          >
-            Sign in
-          </Link>
+          Already verified? <AuthLink href="/auth/sign-in">Sign in</AuthLink>
         </p>
       </AuthCard>
     )
@@ -98,26 +115,10 @@ export default function SignUpPage() {
       title="Create your account"
       description="Sign up with a provider, or use email + password."
     >
-      <div className="grid gap-2 sm:grid-cols-2">
-        <Button
-          variant="outline"
-          type="button"
-          disabled={socialPending !== null}
-          onClick={() => onSocial("google")}
-        >
-          {socialPending === "google" && <Loader2 className="animate-spin" />}
-          Google
-        </Button>
-        <Button
-          variant="outline"
-          type="button"
-          disabled={socialPending !== null}
-          onClick={() => onSocial("github")}
-        >
-          {socialPending === "github" && <Loader2 className="animate-spin" />}
-          GitHub
-        </Button>
-      </div>
+      <AuthSocialButtons
+        pending={socialPending}
+        onSelect={(provider) => onSocial(provider)}
+      />
       <div className="flex items-center gap-3">
         <Separator className="flex-1" />
         <span className="text-xs text-muted-foreground">or</span>
@@ -130,6 +131,7 @@ export default function SignUpPage() {
           <Input
             id="name"
             autoComplete="name"
+            autoFocus
             required
             value={name}
             onChange={(event) => setName(event.target.value)}
@@ -159,20 +161,14 @@ export default function SignUpPage() {
           />
         </div>
         {error && <AuthError message={error} />}
-        <Button type="submit" size="lg" disabled={pending}>
+        <Button type="submit" size="lg" disabled={pending} className="mt-1 h-10">
           {pending && <Loader2 className="animate-spin" />}
-          Create account
+          {pending ? "Creating account…" : "Create account"}
         </Button>
       </form>
 
       <p className="text-center text-sm text-muted-foreground">
-        Already have an account?{" "}
-        <Link
-          href="/auth/sign-in"
-          className="text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
-        >
-          Sign in
-        </Link>
+        Already have an account? <AuthLink href="/auth/sign-in">Sign in</AuthLink>
       </p>
     </AuthCard>
   )

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Loader2, TriangleAlert } from "lucide-react";
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -34,11 +35,45 @@ export function AuthCard({
   );
 }
 
+/**
+ * Inline auth link — the one accent link style used across the auth flow
+ * ("Forgot password?", "Sign up", "Back to sign in").
+ */
+export function AuthLink({
+  href,
+  children,
+  className,
+}: {
+  href: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "font-medium text-primary underline-offset-4 transition-colors hover:underline",
+        className
+      )}
+    >
+      {children}
+    </Link>
+  );
+}
+
 /** Maps better-auth client errors to readable messages. */
 export function errorMessage(error: unknown): string {
   if (!error) return ""
   if (typeof error === "string") return error
-  const err = error as { message?: string; code?: string; status?: number }
+  const err = error as { name?: string; message?: string; code?: string; status?: number }
+  // Aborts come from the auth client's request deadline (lib/auth-client).
+  if (err.name === "AbortError" || /abort/i.test(err.message ?? "")) {
+    return "The request timed out. Check your connection and try again."
+  }
+  // A dead API surfaces as the bare "Failed to fetch" / "NetworkError".
+  if (/failed to fetch|network|connection refused/i.test(err.message ?? "")) {
+    return "Couldn't reach the server. Check your connection and try again."
+  }
   return err.message ?? `Something went wrong${err.status ? ` (${err.status})` : ""}`
 }
 
@@ -73,6 +108,7 @@ export function AuthSocialButtons({
       <Button
         variant="outline"
         type="button"
+        className="h-10"
         disabled={pending !== null}
         onClick={() => onSelect("google")}
       >
@@ -83,6 +119,7 @@ export function AuthSocialButtons({
       <Button
         variant="outline"
         type="button"
+        className="h-10"
         disabled={pending !== null}
         onClick={() => onSelect("github")}
       >

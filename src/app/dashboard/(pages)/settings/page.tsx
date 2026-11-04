@@ -83,7 +83,7 @@ export default function SettingsPage() {
   return (
     <Section
       title="Settings"
-      description="Third-party credentials the platform uses later, server-side. Secrets are AES-256-GCM encrypted at rest and never returned as plaintext."
+      description="Keys Codebot calls other services with. Secrets are stored encrypted and always shown masked."
       columns={1}
     >
       {query.error && (
@@ -204,6 +204,7 @@ function SettingsForm({ settings }: { settings?: Settings }) {
     const meta = SECRET_META[id];
     return (
       <SecretInput
+        key={id}
         id={id}
         label={meta.label}
         placeholder={meta.placeholder}

@@ -34,12 +34,12 @@ export default function AuthLayout({
       </div>
 
       {/* Desktop brand pane */}
-      <aside className="relative hidden overflow-hidden border-r border-border bg-card lg:flex lg:w-1/2">
+      <aside className="relative hidden overflow-hidden border-r border-border bg-card lg:flex lg:w-[45%]">
         <div
           aria-hidden
-          className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_15%,var(--primary)/16%,transparent_60%)]"
+          className="absolute inset-0 bg-[radial-gradient(ellipse_60%_45%_at_18%_-5%,color-mix(in_oklch,var(--primary)_18%,transparent),transparent),radial-gradient(ellipse_55%_40%_at_85%_105%,color-mix(in_oklch,var(--primary)_12%,transparent),transparent)] dark:bg-[radial-gradient(ellipse_60%_45%_at_18%_-5%,color-mix(in_oklch,var(--primary)_28%,transparent),transparent),radial-gradient(ellipse_55%_40%_at_85%_105%,color-mix(in_oklch,var(--primary)_18%,transparent),transparent)]"
         />
-        <div className="relative z-10 flex min-h-[44vh] flex-1 flex-col justify-between p-12">
+        <div className="relative z-10 flex flex-1 flex-col p-12">
           <Link href="/" className="flex items-center gap-2.5" aria-label="Codebot — home">
             <span className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground">
               <Bot className="size-5" />
@@ -49,32 +49,34 @@ export default function AuthLayout({
             </span>
           </Link>
 
-          <div className="max-w-md">
-            <h2 className="font-heading text-balance text-4xl font-semibold tracking-tight">
-              The workspace for everything you write.
-            </h2>
-            <p className="mt-3 text-base text-muted-foreground text-pretty">
-              Notes, todos, files, components, presets, experts, tools and
-              snippets — one quiet workspace, all searchable.
-            </p>
-          </div>
+          <div className="flex flex-1 flex-col justify-center py-12">
+            <div className="max-w-md">
+              <h2 className="font-heading text-balance text-4xl font-semibold tracking-tight">
+                The workspace for everything you write.
+              </h2>
+              <p className="mt-3 text-base text-muted-foreground text-pretty">
+                Notes, todos, files, components, presets, experts, tools and
+                snippets — one quiet workspace, all searchable.
+              </p>
+            </div>
 
-          <ul className="flex flex-col gap-3">
-            {BRAND_BULLETS.map((bullet) => (
-              <li
-                key={bullet}
-                className="flex items-center gap-3 text-sm text-muted-foreground"
-              >
-                <span
-                  aria-hidden
-                  className="grid size-6 shrink-0 place-items-center rounded-full bg-primary/12 text-primary"
+            <ul className="mt-10 flex max-w-md flex-col gap-3">
+              {BRAND_BULLETS.map((bullet) => (
+                <li
+                  key={bullet}
+                  className="flex items-center gap-3 text-sm text-muted-foreground"
                 >
-                  <Check className="size-3" />
-                </span>
-                {bullet}
-              </li>
-            ))}
-          </ul>
+                  <span
+                    aria-hidden
+                    className="grid size-6 shrink-0 place-items-center rounded-full bg-primary/12 text-primary"
+                  >
+                    <Check className="size-3" />
+                  </span>
+                  {bullet}
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </aside>
 

@@ -115,7 +115,11 @@ export function ComponentDetail({ id }: { id: string }) {
               <p className="text-sm text-muted-foreground">
                 {component.files.length} file
                 {component.files.length === 1 ? "" : "s"} · updated{" "}
-                {new Date(component.updatedAt).toLocaleString()}
+                {new Date(component.updatedAt).toLocaleDateString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
               </p>
             </div>
           </div>

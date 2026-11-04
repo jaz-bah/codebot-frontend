@@ -166,7 +166,7 @@ export function SectionCard({
         </CardHeader>
       )}
       {children && <CardContent>{children}</CardContent>}
-      {footer && <CardFooter>{footer}</CardFooter>}
+      {footer && <CardFooter className="mt-auto">{footer}</CardFooter>}
     </Card>
   );
 }

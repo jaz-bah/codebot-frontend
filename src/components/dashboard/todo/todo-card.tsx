@@ -9,7 +9,6 @@ import { SectionCard } from "@/components/shared/Section";
 import { Button } from "@/components/ui/button";
 import { ShareButton } from "@/components/dashboard/posts/share-button";
 import {
-  PRIORITY_ACCENTS,
   PRIORITY_LABELS,
   PRIORITY_STYLES,
 } from "@/components/dashboard/todo/priority-meta";
@@ -53,8 +52,7 @@ export function TodoCard({ todo, onToggle, onDelete, onEdit }: TodoCardProps) {
       <SectionCard
         size="sm"
         className={cn(
-          "h-full border-l-4 transition-colors duration-200",
-          PRIORITY_ACCENTS[todo.priority],
+          "h-full transition-colors duration-200",
           isDone && "opacity-75"
         )}
         title={

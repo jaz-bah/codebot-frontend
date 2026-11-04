@@ -31,10 +31,13 @@ const listParams = {
   sortOrder: "desc" as const,
 };
 
-/** Stable, unique display name for a snippet file row. */
+/** Human display name for a snippet file row (id stays internal). */
 function fileRowName(snippet: IdeSnippet): string {
-  const short = snippet.id.slice(0, 6);
-  return `${snippet.language} · ${short}`;
+  const date = new Date(snippet.updatedAt).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
+  return `${snippet.language} · ${date}`;
 }
 
 /** Shown time for the "Saved …" indicator. */
@@ -44,7 +47,7 @@ function nowTime(): string {
 
 export default function IdeSnippetPage() {
   const query = useIdeSnippetsList(listParams);
-  const items = query.data?.items ?? [];
+  const items = React.useMemo(() => query.data?.items ?? [], [query.data]);
 
   const createSnippetMutation = useCreateIdeSnippet();
   const updateSnippetMutation = useUpdateIdeSnippet();

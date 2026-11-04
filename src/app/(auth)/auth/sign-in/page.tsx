@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
 
-import { AuthCard, AuthError, AuthSocialButtons, errorMessage } from "@/components/auth/auth-card"
+import { AuthCard, AuthError, AuthLink, AuthSocialButtons, errorMessage } from "@/components/auth/auth-card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -27,55 +27,70 @@ export default function SignInPage() {
     setError("")
     setResent(false)
     setPending(true)
-    const { error: authError } = await authClient.signIn.email({
-      email,
-      password,
-      callbackURL: "/dashboard",
-    })
-    setPending(false)
+    try {
+      const { error: authError } = await authClient.signIn.email({
+        email,
+        password,
+        callbackURL: "/dashboard",
+      })
 
-    if (authError) {
-      const message = errorMessage(authError)
-      // Runbook §6: 403 EMAIL_NOT_VERIFIED → verification screen with resend.
-      const status = (authError as { status?: number }).status
-      const notVerified =
-        status === 403 && /verif/i.test(message || String((authError as { code?: string }).code))
-      if (notVerified || /EMAIL_NOT_VERIFIED/i.test(String((authError as { code?: string }).code ?? message))) {
-        setNeedsVerification(true)
-      } else {
-        setError(message)
+      if (authError) {
+        const message = errorMessage(authError)
+        // Runbook §6: 403 EMAIL_NOT_VERIFIED → verification screen with resend.
+        const status = (authError as { status?: number }).status
+        const notVerified =
+          status === 403 && /verif/i.test(message || String((authError as { code?: string }).code))
+        if (notVerified || /EMAIL_NOT_VERIFIED/i.test(String((authError as { code?: string }).code ?? message))) {
+          setNeedsVerification(true)
+        } else {
+          setError(message)
+        }
+        return
       }
-      return
+      // Already signed in: landing page calls get-session → session established.
+      router.replace("/dashboard")
+    } catch (caught) {
+      // Transport failures reject instead of returning `{ error }`.
+      setError(errorMessage(caught))
+    } finally {
+      setPending(false)
     }
-    // Already signed in: landing page calls get-session → session established.
-    router.replace("/dashboard")
   }
 
   async function onSocial(provider: "google" | "github") {
     setError("")
     setSocialPending(provider)
-    const { data, error: authError } = await authClient.signIn.social({
-      provider,
-      callbackURL: "/dashboard",
-    })
-    setSocialPending(null)
-    if (authError) {
-      setError(errorMessage(authError))
-      return
-    }
-    // Runbook §3.3: client receives { url, redirect: true }; redirect manually.
-    if (data?.redirect && data.url) {
-      window.location.href = data.url
+    try {
+      const { data, error: authError } = await authClient.signIn.social({
+        provider,
+        callbackURL: "/dashboard",
+      })
+      if (authError) {
+        setError(errorMessage(authError))
+        return
+      }
+      // Runbook §3.3: client receives { url, redirect: true }; redirect manually.
+      if (data?.redirect && data.url) {
+        window.location.href = data.url
+      }
+    } catch (caught) {
+      setError(errorMessage(caught))
+    } finally {
+      setSocialPending(null)
     }
   }
 
   async function resendVerification() {
     setResent(false)
-    await authClient.sendVerificationEmail({
-      email,
-      callbackURL: `${window.location.origin}/auth/sign-in`,
-    })
-    setResent(true)
+    try {
+      await authClient.sendVerificationEmail({
+        email,
+        callbackURL: `${window.location.origin}/auth/sign-in`,
+      })
+      setResent(true)
+    } catch (caught) {
+      setError(errorMessage(caught))
+    }
   }
 
   return (
@@ -115,6 +130,7 @@ export default function SignInPage() {
               type="email"
               placeholder="you@example.com"
               autoComplete="email"
+              autoFocus
               required
               value={email}
               onChange={(event) => setEmail(event.target.value)}
@@ -140,21 +156,20 @@ export default function SignInPage() {
             />
           </div>
           <AuthError message={error} />
-          <Button type="submit" size="lg" disabled={pending}>
+          <Button
+            type="submit"
+            size="lg"
+            disabled={pending}
+            className="mt-1 h-10"
+          >
             {pending && <Loader2 className="animate-spin" />}
-            Sign in
+            {pending ? "Signing in…" : "Sign in"}
           </Button>
         </form>
       )}
 
       <p className="text-center text-sm text-muted-foreground">
-        Don&apos;t have an account?{" "}
-        <Link
-          href="/auth/sign-up"
-          className="text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
-        >
-          Sign up
-        </Link>
+        Don&apos;t have an account? <AuthLink href="/auth/sign-up">Sign up</AuthLink>
       </p>
     </AuthCard>
   )
