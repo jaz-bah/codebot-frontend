@@ -12,6 +12,7 @@ import {
   type ComponentFormValues,
 } from "@/components/dashboard/components/component-form-dialog";
 import { SectionCard } from "@/components/shared/Section";
+import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -38,10 +39,13 @@ export function ComponentDetail({ id }: { id: string }) {
 
   /* Metadata dialog: null = closed; opening reuses the loaded component. */
   const [dialogOpen, setDialogOpen] = React.useState(false);
+  /* Destructive delete goes through a shared confirm, then navigates back. */
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
 
   const handleDelete = () => {
     deleteMutation.mutate(id, {
       onSuccess: () => {
+        setDeleteConfirmOpen(false);
         router.push(ROUTES.dashboard.components);
       },
     });
@@ -128,12 +132,11 @@ export function ComponentDetail({ id }: { id: string }) {
           <Button
             variant="outline"
             size="sm"
-            disabled={deleteMutation.isPending}
             className="gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive"
-            onClick={handleDelete}
+            onClick={() => setDeleteConfirmOpen(true)}
           >
             <Trash2 className="size-4" />
-            {deleteMutation.isPending ? "Deleting…" : "Delete"}
+            Delete
           </Button>
           <Button size="sm" className="gap-1.5" onClick={() => setDialogOpen(true)}>
             <Pencil className="size-4" />
@@ -179,6 +182,16 @@ export function ComponentDetail({ id }: { id: string }) {
             : undefined
         }
         onSubmit={handleSubmit}
+      />
+
+      <ConfirmDeleteDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        label={component ? `“${component.name}”` : "this component"}
+        consequence="Any code files saved with it are removed too."
+        error={deleteMutation.error?.message}
+        isPending={deleteMutation.isPending}
+        onSubmit={handleDelete}
       />
     </div>
   );

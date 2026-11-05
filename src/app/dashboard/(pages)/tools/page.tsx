@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { Section, SectionCard } from "@/components/shared/Section";
+import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete";
 import {
   ToolFormDialog,
   type ToolFormValues,
@@ -61,7 +62,7 @@ export default function ToolsPage() {
     if (dialog?.mode === "edit") {
       updateToolMutation.mutate(
         { id: dialog.tool.id, patch: values },
-        { onSuccess: closeDialog }
+        { onSuccess: closeDialog },
       );
     } else {
       createToolMutation.mutate(values, { onSuccess: closeDialog });
@@ -71,114 +72,143 @@ export default function ToolsPage() {
   const dialogBusy =
     dialog?.mode === "edit" ? updateToolMutation : createToolMutation;
 
+  /* One-click delete now routes through a confirm: the pending item is
+   * kept in state so the dialog can name it and close on success. */
+  const [deleteTarget, setDeleteTarget] = React.useState<Tool | null>(null);
+
   const removeTool = (tool: Tool) => {
-    deleteToolMutation.mutate(tool.id);
+    setDeleteTarget(tool);
+  };
+
+  const confirmRemoveTool = () => {
+    if (!deleteTarget) return;
+    deleteToolMutation.mutate(deleteTarget.id, {
+      onSuccess: () => setDeleteTarget(null),
+    });
   };
 
   return (
-    <Section
-      title="Tools"
-      description="Your downloadable utilities with one-click links."
-      action={
-        <>
-          <Button
-            size="sm"
-            className="gap-1.5"
-            onClick={() => setDialog({ mode: "create" })}
-          >
-            <Plus className="size-4" />
-            Add tool
-          </Button>
-          <ToolFormDialog
-            open={dialog !== null}
-            onOpenChange={(open) => !open && closeDialog()}
-            tool={dialog?.mode === "edit" ? dialog.tool : undefined}
-            isPending={dialogBusy.isPending}
-            error={dialogBusy.error?.message ?? undefined}
-            onSubmit={submitDialog}
+    <>
+      <Section
+        title="Tools"
+        description="Your downloadable utilities with one-click links."
+        action={
+          <>
+            <Button
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setDialog({ mode: "create" })}
+            >
+              <Plus className="size-4" />
+              Add tool
+            </Button>
+            <ToolFormDialog
+              open={dialog !== null}
+              onOpenChange={(open) => !open && closeDialog()}
+              tool={dialog?.mode === "edit" ? dialog.tool : undefined}
+              isPending={dialogBusy.isPending}
+              error={dialogBusy.error?.message ?? undefined}
+              onSubmit={submitDialog}
+            />
+          </>
+        }
+        totalItems={data?.total ?? 0}
+        pageSize={PAGE_SIZE}
+        page={page}
+        onPageChange={setPage}
+        columns={1}
+        emptyState={
+          <SectionCard
+            title="No tools yet"
+            description="Add your first tool with the button above."
+            className="justify-center py-8 text-center"
           />
-        </>
-      }
-      totalItems={data?.total ?? 0}
-      pageSize={PAGE_SIZE}
-      page={page}
-      onPageChange={setPage}
-      columns={1}
-      emptyState={
-        <SectionCard
-          title="No tools yet"
-          description="Add your first tool with the button above."
-          className="justify-center py-8 text-center"
-        />
-      }
-    >
-      {query.error && (
-        <div className="flex items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          <TriangleAlert className="size-4 shrink-0" />
-          <span>
-            {(query.error as { message?: string } | null)?.message ??
-              "Something went wrong."}
-          </span>
-          <Button
-            variant="ghost"
-            size="xs"
-            className="ml-auto gap-1.5"
-            onClick={() => query.refetch()}
-          >
-            <RotateCcw className="size-3" />
-            Retry
-          </Button>
-        </div>
-      )}
+        }
+      >
+        {query.error && (
+          <div className="flex items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            <TriangleAlert className="size-4 shrink-0" />
+            <span>
+              {(query.error as { message?: string } | null)?.message ??
+                "Something went wrong."}
+            </span>
+            <Button
+              variant="ghost"
+              size="xs"
+              className="ml-auto gap-1.5"
+              onClick={() => query.refetch()}
+            >
+              <RotateCcw className="size-3" />
+              Retry
+            </Button>
+          </div>
+        )}
 
-      {query.isPending ? (
-        <Card size="sm" className="py-0">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-border text-xs uppercase text-muted-foreground">
-                <th className="px-4 py-2.5 font-medium">Name</th>
-                <th className="hidden px-4 py-2.5 font-medium md:table-cell">
-                  Description
-                </th>
-                <th className="hidden px-4 py-2.5 font-medium lg:table-cell">
-                  Updated
-                </th>
-                <th className="px-4 py-2.5 text-right font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Array.from({ length: 6 }, (_, i) => (
-                <tr key={i} className="border-b border-border/50 last:border-0">
-                  <td className="px-4 py-2.5"><Skeleton className="h-4 w-28" /></td>
-                  <td className="hidden px-4 py-2.5 md:table-cell">
-                    <Skeleton className="h-3 w-2/3" />
-                  </td>
-                  <td className="hidden px-4 py-2.5 lg:table-cell">
-                    <Skeleton className="h-3 w-20" />
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <div className="flex justify-end gap-1">
-                      <Skeleton className="size-7 rounded-lg" />
-                      <Skeleton className="size-7 rounded-lg" />
-                      <Skeleton className="size-7 rounded-lg" />
-                    </div>
-                  </td>
+        {query.isPending ? (
+          <Card size="sm" className="py-0">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-border text-xs uppercase text-muted-foreground">
+                  <th className="px-4 py-2.5 font-medium">Name</th>
+                  <th className="hidden px-4 py-2.5 font-medium md:table-cell">
+                    Description
+                  </th>
+                  <th className="hidden px-4 py-2.5 font-medium lg:table-cell">
+                    Updated
+                  </th>
+                  <th className="px-4 py-2.5 text-right font-medium">
+                    Actions
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </Card>
-      ) : (
-        data &&
-        data.items.length > 0 && (
-          <ToolsTable
-            items={data.items}
-            onEdit={(tool) => setDialog({ mode: "edit", tool })}
-            onDelete={removeTool}
-          />
-        )
-      )}
-    </Section>
+              </thead>
+              <tbody>
+                {Array.from({ length: 6 }, (_, i) => (
+                  <tr
+                    key={i}
+                    className="border-b border-border/50 last:border-0"
+                  >
+                    <td className="px-4 py-2.5">
+                      <Skeleton className="h-4 w-28" />
+                    </td>
+                    <td className="hidden px-4 py-2.5 md:table-cell">
+                      <Skeleton className="h-3 w-2/3" />
+                    </td>
+                    <td className="hidden px-4 py-2.5 lg:table-cell">
+                      <Skeleton className="h-3 w-20" />
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <div className="flex justify-end gap-1">
+                        <Skeleton className="size-7 rounded-lg" />
+                        <Skeleton className="size-7 rounded-lg" />
+                        <Skeleton className="size-7 rounded-lg" />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </Card>
+        ) : (
+          data &&
+          data.items.length > 0 && (
+            <ToolsTable
+              items={data.items}
+              onEdit={(tool) => setDialog({ mode: "edit", tool })}
+              onDelete={removeTool}
+            />
+          )
+        )}
+      </Section>
+
+      <ConfirmDeleteDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        label={deleteTarget ? `“${deleteTarget.name}”` : "this tool"}
+        error={deleteToolMutation.error?.message}
+        isPending={deleteToolMutation.isPending}
+        onSubmit={confirmRemoveTool}
+      />
+    </>
   );
 }
 

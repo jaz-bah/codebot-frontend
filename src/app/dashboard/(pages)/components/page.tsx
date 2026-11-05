@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { Section, SectionCard } from "@/components/shared/Section";
+import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete";
 import {
   ComponentFormDialog,
   type ComponentFormValues,
@@ -85,6 +86,20 @@ export default function ComponentsPage() {
   const dialogMutation =
     dialog?.mode === "edit" ? updateComponentMutation : createComponentMutation;
 
+  /* Pending destructive action: the component awaiting its confirm. */
+  const [deleteTarget, setDeleteTarget] = React.useState<Component | null>(
+    null
+  );
+
+  /* One-click delete routed through a shared confirm so destructive
+   * actions never fire on a stray click. */
+  const confirmRemoveComponent = () => {
+    if (!deleteTarget) return;
+    deleteComponentMutation.mutate(deleteTarget.id, {
+      onSuccess: () => setDeleteTarget(null),
+    });
+  };
+
   return (
     <Section
       title="Components"
@@ -155,9 +170,18 @@ export default function ComponentsPage() {
               key={component.id}
               component={component}
               onEdit={(c) => setDialog({ mode: "edit", component: c })}
-              onDelete={(c) => deleteComponentMutation.mutate(c.id)}
+              onDelete={setDeleteTarget}
             />
           ))}
+
+      <ConfirmDeleteDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        label={deleteTarget ? `“${deleteTarget.name}”` : "this component"}
+        error={deleteComponentMutation.error?.message}
+        isPending={deleteComponentMutation.isPending}
+        onSubmit={confirmRemoveComponent}
+      />
     </Section>
   );
 }

@@ -100,7 +100,7 @@ export function useRichTextEditor({
           // this component exposes.
           link: { openOnClick: false, autolink: true },
         }),
-        Placeholder.configure({ placeholder, showOnlyCurrent: false }),
+        Placeholder.configure({ placeholder }),
         ...(userExtensions ?? []),
       ],
       editable,

@@ -1,15 +1,10 @@
 "use client";
 
 import * as React from "react";
-import {
-  Pencil,
-  Plus,
-  RotateCcw,
-  Trash2,
-  TriangleAlert,
-} from "lucide-react";
+import { Pencil, Plus, RotateCcw, Trash2, TriangleAlert } from "lucide-react";
 
 import { Section, SectionCard } from "@/components/shared/Section";
+import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete";
 import {
   ExpertFormDrawer,
   htmlToPlainText,
@@ -61,11 +56,14 @@ export default function ExpertsPage() {
   >(null);
   const closeDrawer = () => setDrawer(null);
 
+  /* Pending destructive action: the expert awaiting its confirm. */
+  const [deleteTarget, setDeleteTarget] = React.useState<Expert | null>(null);
+
   const submitDrawer = (values: ExpertFormValues) => {
     if (drawer?.mode === "edit") {
       updateExpertMutation.mutate(
         { id: drawer.expert.id, patch: values },
-        { onSuccess: closeDrawer }
+        { onSuccess: closeDrawer },
       );
     } else {
       createExpertMutation.mutate(values, { onSuccess: closeDrawer });
@@ -76,76 +74,95 @@ export default function ExpertsPage() {
     drawer?.mode === "edit" ? updateExpertMutation : createExpertMutation;
 
   const removeExpert = (expert: Expert) => {
-    deleteExpertMutation.mutate(expert.id);
+    setDeleteTarget(expert);
+  };
+
+  /* One-click delete routed through a shared confirm. */
+  const confirmRemoveExpert = () => {
+    if (!deleteTarget) return;
+    deleteExpertMutation.mutate(deleteTarget.id, {
+      onSuccess: () => setDeleteTarget(null),
+    });
   };
 
   return (
-    <Section
-      title="Experts"
-      description="Your AI specialists — each one an instruction set you can reuse."
-      action={
-        <>
-          <Button
-            size="sm"
-            className="gap-1.5"
-            onClick={() => setDrawer({ mode: "create" })}
-          >
-            <Plus className="size-4" />
-            Add expert
-          </Button>
-          <ExpertFormDrawer
-            open={drawer !== null}
-            onOpenChange={(open) => !open && closeDrawer()}
-            expert={drawer?.mode === "edit" ? drawer.expert : undefined}
-            isPending={drawerBusy.isPending}
-            error={drawerBusy.error?.message ?? undefined}
-            onSubmit={submitDrawer}
-          />
-        </>
-      }
-      totalItems={data?.total ?? 0}
-      pageSize={PAGE_SIZE}
-      page={page}
-      onPageChange={setPage}
-      columns={4}
-      emptyState={
-        <SectionCard
-          title="No experts yet"
-          description="Add your first expert with the button above."
-          className="justify-center py-8 text-center"
-        />
-      }
-    >
-      {query.error && (
-        <div className="flex items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive sm:col-span-full">
-          <TriangleAlert className="size-4 shrink-0" />
-          <span>
-            {(query.error as { message?: string } | null)?.message ??
-              "Something went wrong."}
-          </span>
-          <Button
-            variant="ghost"
-            size="xs"
-            className="ml-auto gap-1.5"
-            onClick={() => query.refetch()}
-          >
-            <RotateCcw className="size-3" />
-            Retry
-          </Button>
-        </div>
-      )}
-
-      {query.isPending
-        ? Array.from({ length: 8 }, (_, i) => <ExpertCardSkeleton key={i} />)
-        : data?.items.map((expert) => (
-            <ExpertCard
-              key={expert.id}
-              expert={expert}
-              onEdit={(e) => setDrawer({ mode: "edit", expert: e })}
-              onDelete={removeExpert}
+    <>
+      <Section
+        title="Experts"
+        description="Your AI specialists — each one an instruction set you can reuse."
+        action={
+          <>
+            <Button
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setDrawer({ mode: "create" })}
+            >
+              <Plus className="size-4" />
+              Add expert
+            </Button>
+            <ExpertFormDrawer
+              open={drawer !== null}
+              onOpenChange={(open) => !open && closeDrawer()}
+              expert={drawer?.mode === "edit" ? drawer.expert : undefined}
+              isPending={drawerBusy.isPending}
+              error={drawerBusy.error?.message ?? undefined}
+              onSubmit={submitDrawer}
             />
-          ))}
-    </Section>
+          </>
+        }
+        totalItems={data?.total ?? 0}
+        pageSize={PAGE_SIZE}
+        page={page}
+        onPageChange={setPage}
+        columns={4}
+        emptyState={
+          <SectionCard
+            title="No experts yet"
+            description="Add your first expert with the button above."
+            className="justify-center py-8 text-center"
+          />
+        }
+      >
+        {query.error && (
+          <div className="flex items-center gap-2 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive sm:col-span-full">
+            <TriangleAlert className="size-4 shrink-0" />
+            <span>
+              {(query.error as { message?: string } | null)?.message ??
+                "Something went wrong."}
+            </span>
+            <Button
+              variant="ghost"
+              size="xs"
+              className="ml-auto gap-1.5"
+              onClick={() => query.refetch()}
+            >
+              <RotateCcw className="size-3" />
+              Retry
+            </Button>
+          </div>
+        )}
+
+        {query.isPending
+          ? Array.from({ length: 8 }, (_, i) => <ExpertCardSkeleton key={i} />)
+          : data?.items.map((expert) => (
+              <ExpertCard
+                key={expert.id}
+                expert={expert}
+                onEdit={(e) => setDrawer({ mode: "edit", expert: e })}
+                onDelete={removeExpert}
+              />
+            ))}
+      </Section>
+
+      <ConfirmDeleteDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        label={deleteTarget ? `“${deleteTarget.title}”` : "this expert"}
+        error={deleteExpertMutation.error?.message}
+        isPending={deleteExpertMutation.isPending}
+        onSubmit={confirmRemoveExpert}
+      />
+    </>
   );
 }
 
@@ -202,9 +219,7 @@ function ExpertCard({
           size="sm"
           className="w-full"
           disabled={!plain}
-          onClick={() =>
-            window.navigator.clipboard.writeText(plain)
-          }
+          onClick={() => window.navigator.clipboard.writeText(plain)}
         >
           Copy
         </Button>

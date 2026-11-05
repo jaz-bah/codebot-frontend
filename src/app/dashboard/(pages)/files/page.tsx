@@ -20,6 +20,7 @@ import {
 import Link from "next/link";
 
 import { Section, SectionCard } from "@/components/shared/Section";
+import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete";
 import { FileCardSkeleton } from "@/components/skeletons/file-card-skeleton";
 import { DocumentUploadDialog } from "@/components/dashboard/files/document-upload-dialog";
 import { DocumentEditDialog } from "@/components/dashboard/files/document-edit-dialog";
@@ -162,6 +163,15 @@ export default function FilesPage() {
   const [uploadOpen, setUploadOpen] = React.useState(false);
   const [editTarget, setEditTarget] = React.useState<Document | null>(null);
   const closeEdit = () => setEditTarget(null);
+  /* Delete goes through a confirm; success closes it. */
+  const [deleteTarget, setDeleteTarget] = React.useState<Document | null>(null);
+
+  const confirmRemoveDocument = () => {
+    if (!deleteTarget) return;
+    deleteDocumentMutation.mutate(deleteTarget.id, {
+      onSuccess: () => setDeleteTarget(null),
+    });
+  };
 
   const submitEdit = (values: { name: string; description: string | null }) => {
     if (!editTarget) return;
@@ -272,13 +282,21 @@ export default function FilesPage() {
                   doc={doc}
                   isDeleting={deleteDocumentMutation.isPending}
                   onEdit={setEditTarget}
-                  onDelete={deleteDocumentMutation.mutate}
+                  onDelete={setDeleteTarget}
                 />
               ))}
         </>
       )}
       {/* keepPreviousData: stale cards stay visible while the next page
           refetches (see placeholderData in use-documents). */}
+      <ConfirmDeleteDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        label={deleteTarget ? `“${deleteTarget.name}”` : "this file"}
+        error={deleteDocumentMutation.error?.message}
+        isPending={deleteDocumentMutation.isPending}
+        onSubmit={confirmRemoveDocument}
+      />
     </Section>
   );
 }
@@ -287,17 +305,14 @@ export default function FilesPage() {
 /* Card                                                                */
 /* ------------------------------------------------------------------ */
 
-function FileCard({
-  doc,
-  isDeleting,
-  onEdit,
-  onDelete,
-}: {
+type FileCardProps = {
   doc: Document;
   isDeleting: boolean;
   onEdit: (document: Document) => void;
-  onDelete: (id: string) => void;
-}) {
+  onDelete: (doc: Document) => void;
+};
+
+function FileCard({ doc, isDeleting, onEdit, onDelete }: FileCardProps) {
   const kind = kindOf(doc);
   const meta = KIND_META[kind];
   const Icon = meta.icon;
@@ -307,10 +322,14 @@ function FileCard({
       size="sm"
       className="h-full"
       title={<span className="line-clamp-2 break-all">{doc.name}</span>}
-      description={`${meta.label} · ${formatUpdated(doc.updatedAt)}`}
+      description={
+        <span className="block truncate">
+          {meta.label} · {formatUpdated(doc.updatedAt)}
+        </span>
+      }
       lead={
         <span className="flex size-9 items-center justify-center rounded-lg bg-muted text-secondary-foreground">
-          <Icon className="size-4 text-white" />
+          <Icon className="size-4 text-secondary-foreground" />
         </span>
       }
       action={
@@ -329,38 +348,34 @@ function FileCard({
             className="text-destructive hover:bg-destructive/10 hover:text-destructive"
             aria-label={`Delete ${doc.name}`}
             disabled={isDeleting}
-            onClick={() => onDelete(doc.id)}
+            onClick={() => onDelete(doc)}
           >
             <Trash2 className="size-3.5" />
           </Button>
         </div>
       }
       footer={
-        <Button
-          variant="outline"
-          size="sm"
-          className="w-full gap-1.5"
-          onClick={() => downloadDocument(doc)}
-        >
-          <Download className="size-3.5" />
-          Download
-        </Button>
-      }
-    >
-      {doc.description ? (
-        <div className="flex h-full flex-col justify-between gap-3">
-          <p className="line-clamp-3 text-sm text-muted-foreground">
-            {doc.description}
-          </p>
+        <div className="flex w-full flex-col items-stretch gap-2.5">
           <p className="truncate text-xs text-muted-foreground/70">
             {urlFilename(doc)}
           </p>
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full gap-1.5"
+            onClick={() => downloadDocument(doc)}
+          >
+            <Download className="size-3.5" />
+            Download
+          </Button>
         </div>
-      ) : (
-        <p className="truncate text-xs text-muted-foreground/70">
-          {urlFilename(doc)}
+      }
+    >
+      {doc.description ? (
+        <p className="line-clamp-3 text-sm text-muted-foreground">
+          {doc.description}
         </p>
-      )}
+      ) : null}
     </SectionCard>
   );
 }

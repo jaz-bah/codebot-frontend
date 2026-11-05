@@ -19,11 +19,15 @@ import type {
  */
 const PROSE_CLASSES = [
   "[&_.ProseMirror]:outline-none",
-  "[&_.ProseMirror_.is-empty::before]:content-[attr(data-placeholder)]",
-  "[&_.ProseMirror_.is-empty::before]:float-left",
-  "[&_.ProseMirror_.is-empty::before]:h-0",
-  "[&_.ProseMirror_.is-empty::before]:pointer-events-none",
-  "[&_.ProseMirror_.is-empty::before]:text-muted-foreground",
+  // Placeholder renders once, at the top of an EMPTY editor only. The
+  // extension adds `is-editor-empty` to the first node while the document
+  // is empty; `.is-empty` (any empty block) would repeat the text on
+  // every blank line and is deliberately not styled.
+  "[&_.ProseMirror_.is-editor-empty:first-child::before]:content-[attr(data-placeholder)]",
+  "[&_.ProseMirror_.is-editor-empty:first-child::before]:float-left",
+  "[&_.ProseMirror_.is-editor-empty:first-child::before]:h-0",
+  "[&_.ProseMirror_.is-editor-empty:first-child::before]:pointer-events-none",
+  "[&_.ProseMirror_.is-editor-empty:first-child::before]:text-muted-foreground",
   // Prose rhythm
   "[&_.ProseMirror]:text-sm [&_.ProseMirror]:leading-relaxed",
   "[&_.ProseMirror_p]:my-1.5",

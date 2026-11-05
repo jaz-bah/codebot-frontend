@@ -26,6 +26,7 @@ import {
 } from "@/components/dashboard/todo/todo-form-dialog";
 import { TodoCardSkeleton } from "@/components/skeletons/todo-card-skeleton";
 import { Section, SectionCard } from "@/components/shared/Section";
+import { ConfirmDeleteDialog } from "@/components/shared/confirm-delete";
 import { Button } from "@/components/ui/button";
 import {
   useCreateTodo,
@@ -35,7 +36,12 @@ import {
   useUpdateTodo,
   todoKeys,
 } from "@/hooks/use-todos";
-import type { Todo, TodoListParams, TodoPage, UpdateTodoPatch } from "@/types/todo.type";
+import type {
+  Todo,
+  TodoListParams,
+  TodoPage,
+  UpdateTodoPatch,
+} from "@/types/todo.type";
 
 const PAGE_SIZE = 20;
 
@@ -66,10 +72,15 @@ export default function TodoPage() {
   >(null);
   const closeDialog = () => setDialog(null);
 
+  /* Pending destructive action: the todo awaiting its confirm. */
+  const [deleteTarget, setDeleteTarget] = React.useState<Todo | null>(null);
+
   /* DnD sensors ----------------------------------------------------- */
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   const toggleStatus = (todo: Todo) => {
@@ -80,7 +91,16 @@ export default function TodoPage() {
   };
 
   const removeTodo = (todo: Todo) => {
-    deleteTodoMutation.mutate(todo.id);
+    setDeleteTarget(todo);
+  };
+
+  /* One-click delete routed through a shared confirm so destructive
+   * actions never fire on a stray click. Success closes the dialog. */
+  const confirmRemoveTodo = () => {
+    if (!deleteTarget) return;
+    deleteTodoMutation.mutate(deleteTarget.id, {
+      onSuccess: () => setDeleteTarget(null),
+    });
   };
 
   const onDragEnd = (event: DragEndEvent) => {
@@ -103,7 +123,10 @@ export default function TodoPage() {
         position: offset + index,
       })),
     };
-    queryClient.setQueryData(todoKeys.list({ ...listParams, page }), optimistic);
+    queryClient.setQueryData(
+      todoKeys.list({ ...listParams, page }),
+      optimistic,
+    );
 
     // Send the whole visible page with absolute positions (0 … total − 1),
     // matching the /todos/reorder semantics from the API guide.
@@ -111,7 +134,7 @@ export default function TodoPage() {
       reorderedItems.map((todo, index) => ({
         id: todo.id,
         position: offset + index,
-      }))
+      })),
     );
   };
 
@@ -121,14 +144,15 @@ export default function TodoPage() {
       const patch: UpdateTodoPatch = { title, description, priority, dueDate };
       updateTodoMutation.mutate(
         { id: dialog.todo.id, patch },
-        { onSuccess: closeDialog }
+        { onSuccess: closeDialog },
       );
     } else {
       createTodoMutation.mutate(values, { onSuccess: closeDialog });
     }
   };
 
-  const dialogBusy = dialog?.mode === "edit" ? updateTodoMutation : createTodoMutation;
+  const dialogBusy =
+    dialog?.mode === "edit" ? updateTodoMutation : createTodoMutation;
 
   return (
     <DndContext
@@ -141,7 +165,11 @@ export default function TodoPage() {
         description="Drag tasks by the grip handle to reorder them."
         action={
           <>
-            <Button size="sm" className="gap-1.5" onClick={() => setDialog({ mode: "create" })}>
+            <Button
+              size="sm"
+              className="gap-1.5"
+              onClick={() => setDialog({ mode: "create" })}
+            >
               <Plus className="size-4" />
               Add todo
             </Button>
@@ -187,25 +215,34 @@ export default function TodoPage() {
           </div>
         )}
 
-        {query.isPending
-          ? Array.from({ length: 8 }, (_, i) => <TodoCardSkeleton key={i} />)
-          : (
-            <SortableContext
-              items={data?.items.map((todo) => todo.id) ?? []}
-              strategy={rectSortingStrategy}
-            >
-              {data?.items.map((todo) => (
-                <TodoCard
-                  key={todo.id}
-                  todo={todo}
-                  onToggle={toggleStatus}
-                  onDelete={removeTodo}
-                  onEdit={(t) => setDialog({ mode: "edit", todo: t })}
-                />
-              ))}
-            </SortableContext>
-          )}
+        {query.isPending ? (
+          Array.from({ length: 8 }, (_, i) => <TodoCardSkeleton key={i} />)
+        ) : (
+          <SortableContext
+            items={data?.items.map((todo) => todo.id) ?? []}
+            strategy={rectSortingStrategy}
+          >
+            {data?.items.map((todo) => (
+              <TodoCard
+                key={todo.id}
+                todo={todo}
+                onToggle={toggleStatus}
+                onDelete={removeTodo}
+                onEdit={(t) => setDialog({ mode: "edit", todo: t })}
+              />
+            ))}
+          </SortableContext>
+        )}
       </Section>
+
+      <ConfirmDeleteDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        label={deleteTarget ? `“${deleteTarget.title}”` : "this task"}
+        error={deleteTodoMutation.error?.message}
+        isPending={deleteTodoMutation.isPending}
+        onSubmit={confirmRemoveTodo}
+      />
     </DndContext>
   );
 }
