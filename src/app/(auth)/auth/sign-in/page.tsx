@@ -31,7 +31,9 @@ export default function SignInPage() {
       const { error: authError } = await authClient.signIn.email({
         email,
         password,
-        callbackURL: "/dashboard",
+        // Must be an ABSOLUTE frontend URL — a relative value resolves against
+        // the BACKEND origin and lands users on codebot-backend-aued.onrender.com.
+        callbackURL: `${window.location.origin}/dashboard`,
       })
 
       if (authError) {
@@ -63,7 +65,11 @@ export default function SignInPage() {
     try {
       const { data, error: authError } = await authClient.signIn.social({
         provider,
-        callbackURL: "/dashboard",
+        // Must be an ABSOLUTE frontend URL — a relative value resolves against
+        // the BACKEND origin and lands users on codebot-backend-aued.onrender.com.
+        callbackURL: `${window.location.origin}/dashboard`,
+        newUserCallbackURL: `${window.location.origin}/auth/sign-up`,
+        errorCallbackURL: `${window.location.origin}/auth/sign-in`,
       })
       if (authError) {
         setError(errorMessage(authError))
