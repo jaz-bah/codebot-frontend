@@ -40,7 +40,6 @@ const boundedFetch: typeof fetch = (input, init) => {
 
 export const authClient = createAuthClient({
   baseURL: `${API_URL}/api/auth`,
-  cookiePrefix: 'codebot',
   fetchOptions: {
     credentials: "include",
     customFetchImpl: boundedFetch,
