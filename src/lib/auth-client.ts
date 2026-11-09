@@ -6,15 +6,21 @@ import { createAuthClient } from "better-auth/react"
 /**
  * BetterAuth client for the NestJS backend auth system (Backend/Brain/RUNBOOK.md).
  *
+ * - SAME-ORIGIN by design: the frontend's custom server (server.mjs) proxies
+ *   /api/** and /socket.io/** to the backend, so every auth/session cookie is
+ *   first-party on THIS host. Cross-origin calls to the backend origin would
+ *   make browsers treat the cookies as third-party and block them (the two
+ *   onrender.com subdomains are cross-site — onrender.com is a Public Suffix).
  * - Sessions are cookie-based (httpOnly `better-auth.session_token`), 7-day
  *   sliding expiry. Never read/manipulate the cookie — call the client.
  * - Backend listens on PORT 3000, auth routes mounted under `/api/auth/**`.
- * - `credentials: 'include'` is required for cross-origin cookie sending, and
- *   this app's origin must be listed in backend `CORS_ORIGIN_URLS`.
- * - Run the frontend dev server on port 3001 (backend owns 3000).
+ * - Run the frontend dev server on port 3001 (backend owns 3000); in dev the
+ *   Next rewrites fallback proxies to localhost:3000 (BACKEND_ORIGIN).
  */
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000")
+  typeof window !== "undefined"
+    ? window.location.origin
+    : (process.env.NEXT_PUBLIC_FRONTEND_URL ?? "http://localhost:3001")
 
 /** Abort an auth request after this long, so an unreachable API can't
  *  leave a form stuck on "Signing in…" forever. */
