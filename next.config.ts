@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
-const backendOrigin = process.env.BACKEND_ORIGIN ?? "http://localhost:3000";
+// Same var server.mjs uses for /api + /socket.io proxying — one knob for both.
+// (BACKEND_ORIGIN kept as a legacy alias.) Rewrites are baked into the build,
+// so this must be present when the frontend service builds.
+const backendOrigin =
+  process.env.BACKEND_URL ?? process.env.BACKEND_ORIGIN ?? "http://localhost:3000";
 
 const nextConfig: NextConfig = {
   /* config options here */
