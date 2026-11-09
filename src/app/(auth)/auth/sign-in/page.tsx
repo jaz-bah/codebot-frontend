@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Loader2 } from "lucide-react"
 
 import { AuthCard, AuthError, AuthLink, AuthSocialButtons, errorMessage } from "@/components/auth/auth-card"
@@ -12,13 +12,31 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { authClient } from "@/lib/auth-client"
 
-export default function SignInPage() {
+/** Maps the `?error=` query param BetterAuth redirects back with on the
+ *  errorCallbackURL (e.g. OAuth state_mismatch) to a human message. */
+function queryErrorMessage(queryError: string | null): string | null {
+  if (!queryError) return null
+  if (queryError === "state_mismatch") {
+    return "Sign-in with your provider didn't complete. Please try again."
+  }
+  if (queryError === "state_not_found") {
+    return "Sign-in session expired. Please try again."
+  }
+  if (queryError === "invalid_callback_request") {
+    return "Invalid sign-in request. Please try again."
+  }
+  return null
+}
+
+function SignInForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const queryError = searchParams.get("error")
   const [email, setEmail] = React.useState("")
   const [password, setPassword] = React.useState("")
   const [pending, setPending] = React.useState(false)
   const [socialPending, setSocialPending] = React.useState<string | null>(null)
-  const [error, setError] = React.useState("")
+  const [error, setError] = React.useState(queryErrorMessage(queryError) ?? "")
   const [needsVerification, setNeedsVerification] = React.useState(false)
   const [resent, setResent] = React.useState(false)
 
@@ -178,5 +196,13 @@ export default function SignInPage() {
         Don&apos;t have an account? <AuthLink href="/auth/sign-up">Sign up</AuthLink>
       </p>
     </AuthCard>
+  )
+}
+
+export default function SignInPage() {
+  return (
+    <React.Suspense>
+      <SignInForm />
+    </React.Suspense>
   )
 }
