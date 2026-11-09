@@ -15,6 +15,18 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  async rewrites() {
+    return [
+      {
+        source: "/api/auth/:path*",
+        destination: "https://codebot-backend-aued.onrender.com/api/auth/:path*",
+      },
+      {
+        source: "/api/:path*",
+        destination: "https://codebot-backend-aued.onrender.com/:path*",
+      },
+    ];
+  },
 };
 
 export default nextConfig;

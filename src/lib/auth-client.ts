@@ -14,7 +14,7 @@ import { createAuthClient } from "better-auth/react"
  * - Run the frontend dev server on port 3001 (backend owns 3000).
  */
 export const API_URL =
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000"
+  process.env.NEXT_PUBLIC_API_URL ?? (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000")
 
 /** Abort an auth request after this long, so an unreachable API can't
  *  leave a form stuck on "Signing in…" forever. */
@@ -39,7 +39,11 @@ const boundedFetch: typeof fetch = (input, init) => {
 }
 
 export const authClient = createAuthClient({
-  baseURL: `${API_URL}/api/auth`,
+  // Use a relative URL when in the browser so the Next.js rewrite (next.config.ts)
+  // proxies the auth calls to the backend origin. This makes the session
+  // cookie "first-party" (on the frontend domain), which avoids modern
+  // browser third-party cookie blocking.
+  baseURL: typeof window !== "undefined" ? "/api/auth" : `${API_URL}/api/auth`,
   cookiePrefix: 'codebot',
   fetchOptions: {
     credentials: "include",
