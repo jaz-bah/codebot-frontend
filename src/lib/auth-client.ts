@@ -39,11 +39,7 @@ const boundedFetch: typeof fetch = (input, init) => {
 }
 
 export const authClient = createAuthClient({
-  // Use a relative URL when in the browser so the Next.js rewrite (next.config.ts)
-  // proxies the auth calls to the backend origin. This makes the session
-  // cookie "first-party" (on the frontend domain), which avoids modern
-  // browser third-party cookie blocking.
-  baseURL: typeof window !== "undefined" ? "/api/auth" : `${API_URL}/api/auth`,
+  baseURL: `${API_URL}/api/auth`,
   cookiePrefix: 'codebot',
   fetchOptions: {
     credentials: "include",
