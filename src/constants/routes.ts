@@ -16,7 +16,6 @@ export const ROUTES = {
     note: "/dashboard/note",
     artboard: "/dashboard/artboard",
     todo: "/dashboard/todo",
-    blackboard: "/dashboard/blackboard",
     database: "/dashboard/database",
     experts: "/dashboard/experts",
     files: "/dashboard/files",

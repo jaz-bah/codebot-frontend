@@ -20,7 +20,6 @@ import {
   Minus,
   NotepadText,
   Plus,
-  Presentation,
   Settings,
   Terminal,
   UserRound,
@@ -87,7 +86,6 @@ const NAV_ITEMS: NavItem[] = [
   // Existing page: /dashboard/artboard
   { title: "Artboard", icon: Frame, href: ROUTES.dashboard.artboard },
   { title: "Todo", icon: ListTodo, href: ROUTES.dashboard.todo },
-  { title: "Blackboard", icon: Presentation, href: ROUTES.dashboard.blackboard },
   { title: "Experts", icon: Globe, href: ROUTES.dashboard.experts },
   { title: "Files", icon: FileText, href: ROUTES.dashboard.files },
   { title: "Components", icon: LayoutGrid, href: ROUTES.dashboard.components },
