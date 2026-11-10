@@ -253,7 +253,7 @@ export const ArtBoard = Object.assign(
             onKeyDown={handleKeyDown}
             style={{ minHeight, maxHeight, touchAction: "none" }}
             className={cn(
-              "relative flex min-h-48 outline-none select-none",
+              "relative flex min-h-48 h-full outline-none select-none",
               editable ? "cursor-crosshair" : "cursor-default",
               surfaceClassName
             )}
