@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { authClient } from "@/lib/auth-client"
+import { beginSocialSignIn } from "@/lib/social-start"
 
 /** Maps the `?error=` query param BetterAuth redirects back with on the
  *  errorCallbackURL (e.g. OAuth state_mismatch) to a human message. */
@@ -24,6 +25,15 @@ function queryErrorMessage(queryError: string | null): string | null {
   }
   if (queryError === "invalid_callback_request") {
     return "Invalid sign-in request. Please try again."
+  }
+  if (queryError === "provider_unavailable") {
+    return "Sign-in with that provider isn't available right now. Please use email sign-in."
+  }
+  if (queryError === "oauth_start_failed") {
+    return "We couldn't start sign-in with that provider. Please try again or use email sign-in."
+  }
+  if (queryError === "too_many_requests") {
+    return "Too many sign-in attempts. Please wait a minute and try again."
   }
   return null
 }
@@ -77,31 +87,13 @@ function SignInForm() {
     }
   }
 
-  async function onSocial(provider: "google" | "github") {
+  function onSocial(provider: "google" | "github") {
     setError("")
     setSocialPending(provider)
-    try {
-      const { data, error: authError } = await authClient.signIn.social({
-        provider,
-        // Must be an ABSOLUTE frontend URL — a relative value resolves against
-        // the BACKEND origin and lands users on codebot-backend-aued.onrender.com.
-        callbackURL: `${window.location.origin}/dashboard`,
-        newUserCallbackURL: `${window.location.origin}/auth/sign-up`,
-        errorCallbackURL: `${window.location.origin}/auth/sign-in`,
-      })
-      if (authError) {
-        setError(errorMessage(authError))
-        return
-      }
-      // Runbook §3.3: client receives { url, redirect: true }; redirect manually.
-      if (data?.redirect && data.url) {
-        window.location.href = data.url
-      }
-    } catch (caught) {
-      setError(errorMessage(caught))
-    } finally {
-      setSocialPending(null)
-    }
+    // Full-page navigation (GET bridge) — survives Render's Cloudflare edge
+    // challenging the request (the old XHR POST died with a 429 there).
+    // The page unloads into the provider, so no error handling is needed.
+    beginSocialSignIn(provider)
   }
 
   async function resendVerification() {

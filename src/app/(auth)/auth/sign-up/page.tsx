@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { authClient } from "@/lib/auth-client"
+import { beginSocialSignIn } from "@/lib/social-start"
 
 export default function SignUpPage() {
   const [name, setName] = React.useState("")
@@ -47,30 +48,12 @@ export default function SignUpPage() {
     }
   }
 
-  async function onSocial(provider: "google" | "github") {
+  function onSocial(provider: "google" | "github") {
     setError("")
     setSocialPending(provider)
-    try {
-      const { data, error: authError } = await authClient.signIn.social({
-        provider,
-        // Must be an ABSOLUTE frontend URL — a relative value resolves against
-        // the BACKEND origin and lands users on codebot-backend-aued.onrender.com.
-        callbackURL: `${window.location.origin}/dashboard`,
-        newUserCallbackURL: `${window.location.origin}/auth/sign-up`,
-        errorCallbackURL: `${window.location.origin}/auth/sign-in`,
-      })
-      if (authError) {
-        setError(errorMessage(authError))
-        return
-      }
-      if (data?.redirect && data.url) {
-        window.location.href = data.url
-      }
-    } catch (caught) {
-      setError(errorMessage(caught))
-    } finally {
-      setSocialPending(null)
-    }
+    // Full-page navigation (GET bridge) — survives Render's Cloudflare edge
+    // challenging the request (the old XHR POST died with a 429 there).
+    beginSocialSignIn(provider)
   }
 
   if (checkInbox) {
