@@ -14,6 +14,7 @@ export const ROUTES = {
   dashboard: {
     root: "/dashboard",
     note: "/dashboard/note",
+    artboard: "/dashboard/artboard",
     todo: "/dashboard/todo",
     blackboard: "/dashboard/blackboard",
     database: "/dashboard/database",

@@ -12,6 +12,7 @@ import {
   EllipsisVertical,
   FileCode,
   FileText,
+  Frame,
   Globe,
   LayoutGrid,
   ListTodo,
@@ -83,6 +84,8 @@ const NAV_ITEMS: NavItem[] = [
   { title: "Feed", icon: Globe, href: ROUTES.dashboard.root },
   // Existing page: /dashboard/note
   { title: "Notepad", icon: NotepadText, href: ROUTES.dashboard.note },
+  // Existing page: /dashboard/artboard
+  { title: "Artboard", icon: Frame, href: ROUTES.dashboard.artboard },
   { title: "Todo", icon: ListTodo, href: ROUTES.dashboard.todo },
   { title: "Blackboard", icon: Presentation, href: ROUTES.dashboard.blackboard },
   { title: "Experts", icon: Globe, href: ROUTES.dashboard.experts },
