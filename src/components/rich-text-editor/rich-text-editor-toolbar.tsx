@@ -85,7 +85,7 @@ function ToolbarButton({
                       // Keep the editor's selection alive; Tiptap commands use it.
                       event.preventDefault()
                     }} className={cn(
-                      "data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+                      "shrink-0 data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
                     )} onClick={() => onRun(name)} />}>{Icon ? (
                       <Icon aria-hidden />
                     ) : (
@@ -134,13 +134,13 @@ export function RichTextEditorToolbar({
         role="toolbar"
         aria-label="Formatting"
         className={cn(
-          "flex flex-wrap items-center gap-0.5 border-b border-border p-1",
+          "flex items-center gap-0.5 overflow-x-auto border-b border-border p-1 sm:flex-wrap",
           className
         )}
       >
         {items.map((item, index) =>
           item === "separator" ? (
-            <Separator key={`separator-${index}`} orientation="vertical" className="mx-0.5" />
+            <Separator key={`separator-${index}`} orientation="vertical" className="mx-0.5 shrink-0" />
           ) : (
             <ToolbarButton
               key={item}

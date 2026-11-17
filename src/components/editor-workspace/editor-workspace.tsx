@@ -164,7 +164,7 @@ const EditorWorkbenchBase = React.forwardRef<
             className={topbarClassName}
           />
         ) : null}
-        <div className="flex min-h-0 flex-1 overflow-hidden">
+        <div className="relative flex min-h-0 flex-1 overflow-hidden">
           <main
             data-slot="editor-workbench-content"
             className={cn(
@@ -180,6 +180,7 @@ const EditorWorkbenchBase = React.forwardRef<
               aria-label={label}
               className={cn(
                 "w-56 shrink-0 overflow-y-auto border-l border-border",
+                "max-md:absolute max-md:inset-y-0 max-md:right-0 max-md:z-10 max-md:w-60 max-md:bg-background max-md:shadow-lg",
                 sidebarClassName
               )}
             >

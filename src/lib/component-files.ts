@@ -88,3 +88,18 @@ export function languageForFile(name: string): CodeEditorLanguage {
   const extension = name.slice(dot + 1).toLowerCase();
   return EXTENSION_LANGUAGES[extension] ?? "plaintext";
 }
+
+/** Language-slug rules shared with the component API (Joi): lowercase slug
+ * `a-z 0-9 _ -`, ≤ 20 chars. The file name's extension doubles as the
+ * language the API stores (files are nameless server-side), so the
+ * extension must be a valid language slug. Dot-less names (or dotfiles
+ * like ".env") are invalid. Returns the lowercase extension, or null. */
+export function languageFromFileName(fileName: string): string | null {
+  const value = fileName.trim().toLowerCase();
+  const dot = value.lastIndexOf(".");
+  if (dot <= 0) return null; // no extension (or ".env"-style dotfile)
+  const extension = value.slice(dot + 1);
+  return extension.length <= 20 && /^[a-z0-9_-]{1,20}$/.test(extension)
+    ? extension
+    : null;
+}

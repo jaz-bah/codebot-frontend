@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useUploadImage } from "@/hooks/use-uploads";
+import { languageFromFileName } from "@/lib/component-files";
 import {
   IMAGE_UPLOAD_EXTENSIONS,
   IMAGE_UPLOAD_MAX_BYTES,
@@ -61,20 +62,8 @@ export function isValidLanguage(language: string): boolean {
   return /^[a-z0-9_-]{1,20}$/.test(language.trim().toLowerCase());
 }
 
-/** "styles.css" → "css". The file name's extension doubles as the
- * language slug the API stores (files are nameless server-side), so the
- * extension must be a valid language slug. Dot-less names (or dotfiles
- * like ".env") are invalid. */
-export function languageFromFileName(fileName: string): string | null {
-  const value = fileName.trim().toLowerCase();
-  const dot = value.lastIndexOf(".");
-  if (dot <= 0) return null; // no extension (or ".env"-style dotfile)
-  const extension = value.slice(dot + 1);
-  return extension.length <= COMPONENT_LIMITS.fileLanguage &&
-    /^[a-z0-9_-]{1,20}$/.test(extension)
-    ? extension
-    : null;
-}
+/* `languageFromFileName` lives in lib/component-files.ts — shared with the
+ * component workspace, where the file name doubles as the language picker. */
 
 /** Absolute URL (`https://…`, `http://…`) or root-relative (`/…`). */
 export function isValidPreview(preview: string): boolean {

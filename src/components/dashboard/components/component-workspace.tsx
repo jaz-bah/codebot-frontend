@@ -13,7 +13,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { languageForFile } from "@/lib/component-files";
+import {
+  languageForFile,
+  languageFromFileName,
+} from "@/lib/component-files";
 import { cn } from "@/lib/utils";
 import type {
   Component,
@@ -27,11 +30,19 @@ import type {
 
 const MAX_FILES = 20;
 const MAX_CODE_LENGTH = 500_000;
-/** Lowercase slug `a-z 0-9 _ -`, ≤ 20 chars. */
-const LANGUAGE_PATTERN = /^[a-z0-9_-]{1,20}$/;
 
-/** A live file row: language + verbatim code. Index-keyed, payload order. */
-type EditableFile = { language: string; code: string };
+/** A live file row: display name (form-only) + verbatim code. The API
+ *  stores files nameless — the name's extension doubles as the stored
+ *  `language` slug at save time. Index-keyed, payload order. */
+type EditableFile = {
+  /** User-typed file name; undefined for rows straight off the server
+   *  (their display name is derived from the stored language). */
+  name?: string;
+  /** Language slug as last accepted by the server (or derived while
+   *  editing — always in sync with the name's extension). */
+  language: string;
+  code: string;
+};
 
 /* ------------------------------------------------------------------ */
 /* File naming                                                         */
@@ -83,12 +94,20 @@ function defaultFileName(language: string): string {
   }
 }
 
-/** Unique display name for every file, de-duplicated by payload order. */
+/** Display name of a row: the user's name when set, otherwise derived
+ *  from the row's (last-saved or live) language slug. */
+function baseFileName(file: EditableFile): string {
+  const explicit = file.name?.trim();
+  return explicit ? explicit : defaultFileName(file.language);
+}
+
+/** Unique display name for every file, de-duplicated by payload order —
+ *  two rows may share an extension (and even an explicit name). */
 function uniqueFileNames(files: EditableFile[]): string[] {
   const used = new Set<string>();
   const names: string[] = [];
   for (const file of files) {
-    const base = defaultFileName(file.language);
+    const base = baseFileName(file);
     let name = base;
     let counter = 2;
     while (used.has(name)) {
@@ -121,8 +140,9 @@ export type ComponentWorkspaceProps = {
 /**
  * IDE-style workspace for one component's code files: flat file tree on
  * the left, CodeMirror on the right. The API has no file paths — files
- * carry a language slug only, so display names are derived from it
- * ("styles.css", "script.js", …).
+ * carry a language slug only, and each row's display file name is
+ * form-only: the name's extension IS the language slug the API stores.
+ * Server rows without a typed name derive one ("styles.css", "script.js", …).
  *
  * Local state is the live file array; its order is the payload order the
  * server keeps as 0-based positions. Save sends the whole set — the
@@ -170,21 +190,23 @@ export function ComponentWorkspace({
   const activeIndex = Math.max(0, Math.min(selectedIndex, files.length - 1));
   const activeFile = files[activeIndex];
 
-  /* Dirty when any row differs from the accepted baseline (added or
-   * removed rows count as dirty too). */
+  /* Dirty when any row differs from the accepted baseline (added,
+   * removed, renamed or edited rows count as dirty too). */
   const isDirty =
     files.length !== baseline.length ||
     files.some(
       (file, i) =>
+        (baseline[i]?.name ?? "") !== (file.name ?? "") ||
         (baseline[i]?.language ?? "") !== file.language ||
         (baseline[i]?.code ?? "") !== file.code
     );
 
-  /* Save validation: valid language slugs on every row and code within
-   * the per-file budget. */
-  const invalidCount = files.filter(
-    (file) => !LANGUAGE_PATTERN.test(file.language.trim().toLowerCase())
-  ).length;
+  /* Save validation: every name needs a valid extension (= language slug)
+   * and code within the per-file budget. */
+  const invalidCount = files.filter((file) => {
+    if (file.name === undefined) return false; // untouched server row
+    return languageFromFileName(file.name) === null;
+  }).length;
   const overlongCount = files.filter(
     (file) => file.code.length > MAX_CODE_LENGTH
   ).length;
@@ -194,9 +216,15 @@ export function ComponentWorkspace({
     invalidCount === 0 &&
     overlongCount === 0;
 
-  const updateActiveLanguage = (language: string) => {
+  /** Editing the name re-derives the language live: the extension IS the
+   *  language the API will store. Invalid → "" (blocks save until fixed). */
+  const updateActiveName = (name: string) => {
     setFiles((prev) =>
-      prev.map((file, i) => (i === activeIndex ? { ...file, language } : file))
+      prev.map((file, i) =>
+        i === activeIndex
+          ? { ...file, name, language: languageFromFileName(name) ?? "" }
+          : file
+      )
     );
   };
 
@@ -225,20 +253,28 @@ export function ComponentWorkspace({
   const handleSave = async () => {
     if (!canSave || isSaving) return;
     const payload: ComponentFileInput[] = files.map((file) => ({
-      language: file.language.trim().toLowerCase(),
+      language:
+        file.name !== undefined
+          ? (languageFromFileName(file.name) ?? file.language)
+          : file.language.trim().toLowerCase(),
       code: file.code,
     }));
     await onSave(component.id, { files: payload });
-    /* Accepted: this payload is the new baseline; live rows converge. */
-    setBaseline(payload);
-    setFiles(payload);
+    /* Accepted: this payload is the new baseline; live rows converge.
+     * The typed names stay on the rows — they are display-only. */
+    const baselineRows = payload.map((file, i) => ({
+      ...file,
+      name: files[i].name,
+    }));
+    setBaseline(baselineRows);
+    setFiles(baselineRows);
     setSavedAt(new Date().toLocaleTimeString());
   };
 
   const retryHint = overlongCount > 0
     ? `${overlongCount} file${overlongCount === 1 ? "" : "s"} exceed the ${MAX_CODE_LENGTH.toLocaleString()} character code limit.`
     : invalidCount > 0
-      ? `Fix ${invalidCount} language${invalidCount === 1 ? "" : "s"} — use a lowercase slug (a-z, 0-9, _ or -).`
+      ? `Fix ${invalidCount} file name${invalidCount === 1 ? "" : "s"} — each needs an extension (a-z, 0-9, _ or -), e.g. styles.css.`
       : undefined;
 
   return (
@@ -297,28 +333,31 @@ export function ComponentWorkspace({
       }
     >
       <div className="flex h-full min-h-0 flex-col">
-        {/* Language row — the only per-file metadata the API carries. */}
+        {/* File name row — the name's extension IS the language the API
+         *  stores; display names are form-only. */}
         <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
-          <Label htmlFor="file-language" className="text-xs">
-            Language
+          <Label htmlFor="file-name" className="text-xs">
+            File name
           </Label>
           <Input
-            id="file-language"
-            value={activeFile?.language ?? ""}
-            onChange={(event) => updateActiveLanguage(event.target.value)}
-            placeholder="e.g. css, html, ts"
-            maxLength={20}
+            id="file-name"
+            value={activeFile ? baseFileName(activeFile) : ""}
+            onChange={(event) => updateActiveName(event.target.value)}
+            placeholder="e.g. styles.css, index.html, utils.ts"
+            maxLength={100}
             className={cn(
-              "h-7 w-44 font-mono text-xs",
+              "h-7 w-52 font-mono text-xs",
               activeFile &&
-                !LANGUAGE_PATTERN.test(activeFile.language.trim().toLowerCase()) &&
+                activeFile.name !== undefined &&
+                languageFromFileName(activeFile.name) === null &&
                 "border-destructive"
             )}
             autoComplete="off"
             spellCheck={false}
           />
           <span className="text-xs text-muted-foreground">
-            lowercase slug: a-z 0-9 _ - · file {activeIndex + 1}/{files.length}
+            the extension sets the language · file {activeIndex + 1}/
+            {files.length}
           </span>
           <Button
             type="button"

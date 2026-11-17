@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   noteKeys,
   useCreateFile,
@@ -99,11 +100,18 @@ type DialogSpec =
   | { kind: "rename"; node: WorkspaceFile }
   | { kind: "delete"; node: WorkspaceFile };
 
-/** Map API tree nodes onto the workbench's plain `WorkspaceFile` shape. */
+/** Map API tree nodes onto the workbench's plain `WorkspaceFile` shape.
+ *  Note names display without the `.html` suffix — it's a storage
+ *  contract (every note file ends in .html server-side), not something
+ *  the user should read. Rename/delete operate on the real name via the
+ *  server node; `normalizeName` re-appends the suffix after a rename. */
 function toTreeFiles(nodes: WorkspaceFileNode[]): WorkspaceFile[] {
   return nodes.map((node) => ({
     id: node.id,
-    name: node.name,
+    name:
+      node.type === "file"
+        ? node.name.replace(/\.html$/i, "")
+        : node.name,
     type: node.type,
     children: node.children ? toTreeFiles(node.children) : undefined,
   }));
@@ -404,6 +412,7 @@ function DeleteDialog({ open, onOpenChange, node, onSubmit }: DeleteDialogProps)
 
 export default function NotePage() {
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
 
   /* Workspace structure: folders + note files from GET /files/tree. */
   const treeQuery = useFileTree();
@@ -697,7 +706,10 @@ export default function NotePage() {
           onExpandedIdsChange={setExpandedIds}
           dirty={isDirty}
           onSave={handleSave}
-          className="h-[calc(100vh-88px)]"
+          /* Closed by default on phones — the file tree is an overlay
+           * there; desktop keeps it docked and open. */
+          defaultSidebarOpen={!isMobile}
+          className="h-[calc(100dvh-88px)]"
           renderItemAction={(file) => (
             <NodeMenu
               file={file}
