@@ -45,6 +45,10 @@ export type Post = {
   resourceId: string;
   title: string;
   description: string | null;
+  /** Preview image of the shared component (null for every other kind).
+   *  Ships on the post itself — component reads are owner-scoped, so the
+   *  feed renders this instead of fetching the resource. */
+  preview: string | null;
   createdAt: string;
   updatedAt: string;
   author: PostAuthor;

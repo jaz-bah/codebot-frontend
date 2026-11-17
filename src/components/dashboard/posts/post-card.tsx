@@ -22,10 +22,8 @@ import { authClient } from "@/lib/auth-client";
 import { useUnvotePost, useVotePost } from "@/hooks/use-posts";
 import { fetchPreset } from "@/services/preset.service";
 import { fetchIdeSnippet } from "@/services/ide-snippet.service";
-import { fetchComponent } from "@/services/component.service";
 import { presetKeys } from "@/hooks/use-presets";
 import { ideSnippetKeys } from "@/hooks/use-ide-snippets";
-import { componentKeys } from "@/hooks/use-components";
 import type { Post, PostResourceType } from "@/types/post.type";
 import { cn } from "@/lib/utils";
 
@@ -35,11 +33,12 @@ const CodeEditor = dynamic(
   () => import("@/components/code-editor").then((m) => m.CodeEditor),
   {
     ssr: false,
-    /* Same footprint as the loaded editor: fixed 200px, full-bleed. */
+    /* Same footprint as the loaded editor: stretches with the card body
+     * (min 200px), full-bleed. */
     loading: () => (
       <div
         aria-hidden
-        className="-mx-4 -mb-4 h-[200px] animate-pulse rounded-none border-y bg-muted/40"
+        className="-mx-4 -mb-4 min-h-[200px] flex-1 animate-pulse rounded-none border-y bg-muted/40"
       />
     ),
   }
@@ -81,7 +80,6 @@ type ResourceData = {
   hasResource: boolean;
   code: string | null;
   language: CodeEditorLanguage;
-  preview: string | null;
 };
 
 /**
@@ -231,6 +229,9 @@ function CodePostCard({
   return (
     <SectionCard
       className="h-full"
+      /* The body stretches inside the equal-height grid card so the
+       * editor fills it — no dead space below the code. */
+      contentClassName="flex min-h-0 flex-1 flex-col"
       title={post.title}
       action={
         <div
@@ -251,8 +252,8 @@ function CodePostCard({
         readOnly
         placeholder="No description."
         label={`${post.title} code`}
-        height="200px"
-        className="-mx-4 -mb-4 rounded-none border-0 shadow-none focus-within:ring-0"
+        height="100%"
+        className="-mx-4 -mb-4 h-full min-h-[200px] rounded-none border-0 shadow-none focus-within:ring-0"
       />
     </SectionCard>
   );
@@ -271,26 +272,25 @@ function ComponentPostCard({
   vote: React.ReactNode;
   voteError?: string;
 }) {
-  const resource = usePostResource(post);
-
   return (
     /* A header suppresses SectionCard's title — the post title lives
        in the footer, exactly like `ComponentCard`. */
     <SectionCard
       className="h-full transition-[box-shadow,ring-color] group-hover/card:ring-foreground/20"
       header={
-        resource.preview ? (
+        post.preview ? (
           <div className="aspect-video bg-muted">
             <img
-              src={resource.preview}
+              src={post.preview}
               alt={`${post.title} preview`}
               loading="lazy"
               className="aspect-video w-full bg-muted object-cover transition-transform duration-300 group-hover/card:scale-[1.03]"
             />
           </div>
         ) : (
-          /* Owner-scoped reads: other users' component ids don't resolve,
-             so their posts show a muted placeholder instead of a preview. */
+          /* The preview ships on the post itself, but a component created
+             before previews existed (or without one) falls back to a
+             muted placeholder. */
           <div
             role="img"
             aria-label="No preview available"
@@ -422,16 +422,15 @@ function CopyIconButton({ text, label }: { text: string; label: string }) {
 /* ------------------------------------------------------------------ */
 
 /**
- * Fetches the real resource behind a post. Resource reads are
- * owner-scoped (foreign ids → 404), so this only runs when the
- * signed-in viewer authored the post; every other card renders the
- * post's own presentation (description text / placeholder preview)
- * without a doomed request.
+ * Fetches the real code behind a preset/IDE-snippet post. Resource reads are
+ * owner-scoped (foreign ids → 404), so this only runs when the signed-in
+ * viewer authored the post; every other card renders the post's own
+ * presentation (description text) without a doomed request. Component posts
+ * don't go through here — their preview ships on the post itself.
  */
 function usePostResource(post: Post): ResourceData {
   const isPreset = post.resourceType === "preset";
   const isSnippet = post.resourceType === "snippet";
-  const isComponent = post.resourceType === "component";
 
   /* Owner-scoped reads 404 for anyone else — only request the resource
    * when the session viewer authored this post (client-side gate per
@@ -440,7 +439,7 @@ function usePostResource(post: Post): ResourceData {
   const viewerId = session?.data?.user?.id;
   const isOwn = viewerId !== undefined && viewerId === post.author.id;
 
-  /* Reuse the presets/snippets/components detail cache keys so the data
+  /* Reuse the presets/snippets detail cache keys so the data
    * is shared with the owner's own pages. */
   const presetQuery = useQuery({
     queryKey: presetKeys.detail(post.resourceId),
@@ -456,13 +455,6 @@ function usePostResource(post: Post): ResourceData {
     retry: false,
     select: (snippet) => ({ language: snippet.language, code: snippet.data }),
   });
-  const componentQuery = useQuery({
-    queryKey: componentKeys.detail(post.resourceId),
-    queryFn: () => fetchComponent(post.resourceId),
-    enabled: isComponent && isOwn,
-    retry: false,
-    select: (component) => ({ preview: component.preview }),
-  });
 
   const codeResolved = isPreset
     ? presetQuery.data
@@ -471,10 +463,8 @@ function usePostResource(post: Post): ResourceData {
       : undefined;
 
   return {
-    hasResource:
-      codeResolved !== undefined || componentQuery.data !== undefined,
+    hasResource: codeResolved !== undefined,
     code: codeResolved?.code ?? null,
     language: codeResolved?.language ?? "plaintext",
-    preview: isComponent ? (componentQuery.data?.preview ?? null) : null,
   };
 }

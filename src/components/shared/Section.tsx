@@ -139,6 +139,9 @@ export type SectionCardProps = {
   header?: React.ReactNode;
   size?: "default" | "sm";
   className?: string;
+  /** Classes for the body wrapper (`CardContent`) — e.g. make it stretch
+   *  inside an equal-height card so content can fill the card bottom. */
+  contentClassName?: string;
 };
 
 /** Convenience card matching the shared `ui/card` look. Use it as the
@@ -153,6 +156,7 @@ export function SectionCard({
   footer,
   size = "default",
   className,
+  contentClassName,
 }: SectionCardProps) {
   return (
     <Card size={size} className={className}>
@@ -165,7 +169,7 @@ export function SectionCard({
           {action && <CardAction>{action}</CardAction>}
         </CardHeader>
       )}
-      {children && <CardContent>{children}</CardContent>}
+      {children && <CardContent className={contentClassName}>{children}</CardContent>}
       {footer && <CardFooter className="mt-auto">{footer}</CardFooter>}
     </Card>
   );

@@ -240,16 +240,15 @@ function ComponentFormFields({
 
   const canSubmit =
     isNameValid && isPreviewValid && !isPending && !isUploadingImage;
-  /* Per-row language (the extension) + overall row problems. */
+  /* Per-row language (the extension) + overall row problems.
+   * Duplicate extensions are ALLOWED: the API stores files nameless in
+   * payload order (a `position` rank), and the workspace de-duplicates
+   * the derived display names ("styles.css", "styles-2.css", …). */
   const fileLanguages = files.map((file) => languageFromFileName(file.name));
   const hasInvalidFile = files.some(
     (file, index) => fileLanguages[index] === null || file.code.length === 0
   );
-  /* Duplicate extensions → two rows map to the same stored language. */
-  const hasDuplicateLanguage =
-    new Set(fileLanguages.filter((l) => l !== null)).size !==
-    fileLanguages.filter((l) => l !== null).length;
-  const childFormErrors = hasInvalidFile || hasDuplicateLanguage;
+  const childFormErrors = hasInvalidFile;
   const canSubmitCreate = !isEdit && !childFormErrors && canSubmit;
   const canSubmitEdit = isEdit && canSubmit;
 
@@ -472,17 +471,11 @@ function ComponentFormFields({
                 a-z, 0-9, `_`, `-`) and code.
               </p>
             )}
-            {!hasInvalidFile && hasDuplicateLanguage && (
-              <p className="flex items-center gap-1.5 text-xs text-destructive">
-                <TriangleAlert className="size-3.5 shrink-0" />
-                Two files share an extension — each needs a distinct one
-                (files are stored per language).
-              </p>
-            )}
-            {!childFormErrors && (
+            {!hasInvalidFile && (
               <p className="text-xs text-muted-foreground">
-                The extension becomes the file&apos;s language (css, tsx, json…) —
-                files are stored per language, not by full name.
+                The extension becomes the file&apos;s language (css, tsx,
+                json…) — two files may share one; they are kept in the order
+                you add them.
               </p>
             )}
           </div>

@@ -21,9 +21,40 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Codebot — your coding workspace",
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_FRONTEND_URL ?? "http://localhost:3001"
+  ),
+  title: {
+    default: "Codebot — your coding workspace",
+    template: "%s · Codebot",
+  },
   description:
     "Notes, todos, files, components, presets, experts, tools and code snippets — one dark, quiet workspace, all searchable.",
+  applicationName: "Codebot",
+  keywords: [
+    "codebot",
+    "coding workspace",
+    "snippets",
+    "components",
+    "presets",
+    "developer tools",
+    "notes",
+    "todo",
+  ],
+  openGraph: {
+    type: "website",
+    siteName: "Codebot",
+    locale: "en_US",
+    title: "Codebot — your coding workspace",
+    description:
+      "Notes, todos, files, components, presets, experts, tools and code snippets — one dark, quiet workspace, all searchable.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Codebot — your coding workspace",
+    description:
+      "Notes, todos, files, components, presets, experts, tools and code snippets — one dark, quiet workspace, all searchable.",
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
