@@ -55,6 +55,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar"
 
 export type User = {
@@ -116,6 +117,10 @@ export function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar> & { user?: User }) {
   const pathname = usePathname()
+  const { state, isMobile } = useSidebar()
+  // Icon-only rail (desktop collapsed state). On mobile the sidebar renders
+  // as a full-width sheet, so the inline accordion still works there.
+  const isCollapsed = state === "collapsed" && !isMobile
   const initials = user.name
     .split(" ")
     .map((part) => part[0])
@@ -167,46 +172,81 @@ export function AppSidebar({
             <SidebarMenu>
               {NAV_ITEMS.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    isActive={
-                      // Exact match always wins. Prefix matching is skipped for
-                      // the dashboard root ("/dashboard"), which is a prefix of
-                      // every other item's href and would highlight it on
-                      // every subpage, and for section toggles (Commands/MVC):
-                      // only the sub-item highlights on a child page.
-                      pathname === item.href ||
-                      (!item.sub &&
-                        item.href !== ROUTES.dashboard.root &&
-                        pathname.startsWith(item.href + "/"))
-                    }
-                    tooltip={item.title}
-                    onClick={
-                      item.sub ? () => toggleSection(item.title) : undefined
-                    }
-                    render={item.sub ? undefined : <Link href={item.href} />}
-                  >
-                    <item.icon />
-                    <span>{item.title}</span>
-                    {item.sub && (
-                      <span className="relative ml-auto size-4 shrink-0 group-data-[collapsible=icon]:hidden">
-                        <Plus className="absolute inset-0 size-4 transition-opacity duration-150" />
-                        <Minus
-                          className={`absolute inset-0 size-4 transition-opacity duration-150 ${
-                            openSections[item.title]
-                              ? "opacity-100"
-                              : "opacity-0"
-                          }`}
-                        />
-                      </span>
-                    )}
-                  </SidebarMenuButton>
+                  {item.sub && isCollapsed ? (
+                    /* Collapsed rail: no room for an inline accordion — open
+                       the sub-items as a dropdown menu anchored to the icon. */
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        render={
+                          <SidebarMenuButton
+                            isActive={
+                              pathname === item.href ||
+                              pathname.startsWith(item.href + "/")
+                            }
+                            tooltip={item.title}
+                          />
+                        }
+                      >
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        side="right"
+                        align="start"
+                        className="min-w-40"
+                      >
+                        {item.sub.map((subItem) => (
+                          <DropdownMenuItem
+                            key={subItem.href}
+                            render={<Link href={subItem.href} />}
+                          >
+                            {subItem.title}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : (
+                    <SidebarMenuButton
+                      isActive={
+                        // Exact match always wins. Prefix matching is skipped for
+                        // the dashboard root ("/dashboard"), which is a prefix of
+                        // every other item's href and would highlight it on
+                        // every subpage, and for section toggles (Commands/MVC):
+                        // only the sub-item highlights on a child page.
+                        pathname === item.href ||
+                        (!item.sub &&
+                          item.href !== ROUTES.dashboard.root &&
+                          pathname.startsWith(item.href + "/"))
+                      }
+                      tooltip={item.title}
+                      onClick={
+                        item.sub ? () => toggleSection(item.title) : undefined
+                      }
+                      render={item.sub ? undefined : <Link href={item.href} />}
+                    >
+                      <item.icon />
+                      <span>{item.title}</span>
+                      {item.sub && (
+                        <span className="relative ml-auto size-4 shrink-0 group-data-[collapsible=icon]:hidden">
+                          <Plus className="absolute inset-0 size-4 transition-opacity duration-150" />
+                          <Minus
+                            className={`absolute inset-0 size-4 transition-opacity duration-150 ${
+                              openSections[item.title]
+                                ? "opacity-100"
+                                : "opacity-0"
+                            }`}
+                          />
+                        </span>
+                      )}
+                    </SidebarMenuButton>
+                  )}
                   {item.action === "add" && !item.sub && (
                     <SidebarMenuAction className="cursor-pointer">
                       <Plus />
                       <span className="sr-only">Add {item.title}</span>
                     </SidebarMenuAction>
                   )}
-                  {item.sub && openSections[item.title] && (
+                  {item.sub && !isCollapsed && openSections[item.title] && (
                     <SidebarMenuSub>
                       {item.sub.map((subItem) => (
                         <SidebarMenuSubItem key={subItem.href}>

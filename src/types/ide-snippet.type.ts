@@ -7,8 +7,10 @@
 export type IdeSnippet = {
   id: string;
   userId: string;
-  /** Free-form language label, 1–50 chars ("css", "ts", "c++", …). */
+  /** Language hint — always "json" for snippets created by the UI. */
   language: string;
+  /** File name shown in the workbench tree (null for legacy rows). */
+  fileName: string | null;
   /** Code stored verbatim (1–20 000 chars, never trimmed). */
   data: string;
   createdAt: string;
@@ -38,10 +40,12 @@ export type IdeSnippetPage = {
 
 export type CreateIdeSnippetInput = {
   language: string;
+  /** File name shown in the workbench tree (optional for non-UI callers). */
+  fileName?: string | null;
   /** Verbatim code — sent exactly as received. */
   data: string;
 };
 
 export type UpdateIdeSnippetPatch = Partial<
-  Pick<IdeSnippet, "language" | "data">
+  Pick<IdeSnippet, "language" | "fileName" | "data">
 >;

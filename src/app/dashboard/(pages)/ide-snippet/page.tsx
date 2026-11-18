@@ -18,7 +18,6 @@ import {
   useIdeSnippetsList,
   useUpdateIdeSnippet,
 } from "@/hooks/use-ide-snippets";
-import type { CodeEditorLanguage } from "@/components/code-editor";
 import type { IdeSnippet } from "@/types/ide-snippet.type";
 
 /* The workbench shows the whole (paginated) list in the file tree. */
@@ -31,13 +30,14 @@ const listParams = {
   sortOrder: "desc" as const,
 };
 
-/** Human display name for a snippet file row (id stays internal). */
+/** Human display name for a snippet file row (id stays internal).
+ * Legacy rows (no stored file name) fall back to the language label. */
 function fileRowName(snippet: IdeSnippet): string {
   const date = new Date(snippet.updatedAt).toLocaleDateString(undefined, {
     month: "short",
     day: "numeric",
   });
-  return `${snippet.language} · ${date}`;
+  return `${snippet.fileName ?? snippet.language} · ${date}`;
 }
 
 /** Shown time for the "Saved …" indicator. */
@@ -99,13 +99,17 @@ export default function IdeSnippetPage() {
   };
 
   const submitDialog = (values: SnippetFormValues) => {
-    createSnippetMutation.mutate(values, {
-      onSuccess: (created) => {
-        setDialogOpen(false);
-        setSelectedId(created.id);
-        setContents((prev) => ({ ...prev, [created.id]: created.data }));
+    // All snippets are JSON files — the language is fixed.
+    createSnippetMutation.mutate(
+      { ...values, language: "json" },
+      {
+        onSuccess: (created) => {
+          setDialogOpen(false);
+          setSelectedId(created.id);
+          setContents((prev) => ({ ...prev, [created.id]: created.data }));
+        },
       },
-    });
+    );
   };
 
   return (
@@ -179,7 +183,8 @@ export default function IdeSnippetPage() {
           }
         >
           <CodeEditor
-            language={active.language as CodeEditorLanguage}
+            /* Snippets are JSON files — always highlight as json. */
+            language="json"
             value={activeCode}
             onValueChange={(next) =>
               setContents((prev) => ({ ...prev, [active.id]: next }))

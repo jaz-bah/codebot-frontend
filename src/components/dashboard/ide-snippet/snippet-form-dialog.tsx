@@ -15,8 +15,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export type SnippetFormValues = {
-  /** Free-form language label (1–50 chars, sent trimmed). */
-  language: string;
+  /** File name shown in the workbench tree (1–255 chars, sent trimmed). */
+  fileName: string;
   /** Verbatim code (1–20 000 chars, sent exactly as received). */
   data: string;
 };
@@ -66,17 +66,17 @@ function SnippetFormFields({
   onOpenChange: (open: boolean) => void;
   onSubmit: (values: SnippetFormValues) => void;
 }) {
-  const [language, setLanguage] = React.useState("");
+  const [fileName, setFileName] = React.useState("");
   const [code, setCode] = React.useState("");
 
   const canSubmit =
-    language.trim().length > 0 && code.length > 0 && !isPending;
+    fileName.trim().length > 0 && code.length > 0 && !isPending;
 
   const handleSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     if (!canSubmit) return;
     // `data` is stored verbatim — send the code exactly as received.
-    onSubmit({ language: language.trim(), data: code });
+    onSubmit({ fileName: fileName.trim(), data: code });
   };
 
   return (
@@ -84,19 +84,19 @@ function SnippetFormFields({
       <DialogHeader>
         <DialogTitle>New snippet</DialogTitle>
         <DialogDescription>
-          Label the language and paste the code — it is stored exactly as
+          Name the JSON file and paste its contents — it is stored exactly as
           received.
         </DialogDescription>
       </DialogHeader>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="snippet-language">Language</Label>
+          <Label htmlFor="snippet-file-name">File name</Label>
           <Input
-            id="snippet-language"
-            value={language}
-            onChange={(event) => setLanguage(event.target.value)}
-            placeholder="e.g. css, ts, python, c++"
-            maxLength={50}
+            id="snippet-file-name"
+            value={fileName}
+            onChange={(event) => setFileName(event.target.value)}
+            placeholder="e.g. en.default.json, settings_data.json"
+            maxLength={255}
             autoFocus
           />
         </div>
@@ -106,7 +106,7 @@ function SnippetFormFields({
             id="snippet-code"
             value={code}
             onChange={(event) => setCode(event.target.value)}
-            placeholder="Paste your code here…"
+            placeholder="Paste your JSON here…"
             rows={10}
             maxLength={20000}
             spellCheck={false}
