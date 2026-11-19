@@ -23,6 +23,7 @@ import {
   Settings,
   Terminal,
   UserRound,
+  Wand,
   Wrench,
 } from "lucide-react"
 
@@ -93,6 +94,10 @@ const NAV_ITEMS: NavItem[] = [
   { title: "Presets", icon: Code, href: ROUTES.dashboard.presets },
   { title: "Tools", icon: Wrench, href: ROUTES.dashboard.tools },
   { title: "IDE Snippet", icon: FileCode, href: ROUTES.dashboard.ideSnippet },
+  { title: "Dev Tools", icon: Wand, href: ROUTES.devTools.root, sub: [
+    { title: "Text Transform", href: ROUTES.devTools.textTransform },
+    { title: "Text Compare", href: ROUTES.devTools.textCompare },
+  ] },
   { title: "Commands", icon: Terminal, href: ROUTES.dashboard.commands.root, sub: [
     { title: "GitHub", href: ROUTES.dashboard.commands.github },
     { title: "Linux", href: ROUTES.dashboard.commands.linux },

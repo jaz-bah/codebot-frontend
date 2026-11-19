@@ -11,6 +11,11 @@ export const ROUTES = {
     resetPassword: "/auth/reset-password",
     verifyEmail: "/auth/verify-email",
   },
+  devTools: {
+    root: "/dev-tools",
+    textTransform: "/dev-tools/text-transform",
+    textCompare: "/dev-tools/text-compare",
+  },
   dashboard: {
     root: "/dashboard",
     note: "/dashboard/note",
