@@ -225,11 +225,10 @@ function ExpertCard({
         </Button>
       }
     >
-      {expert.description ? (
-        <div
-          className="line-clamp-4 [&_a]:underline [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_h1]:text-base [&_h2]:text-sm [&_h3]:text-sm [&_li]:ml-4 [&_li]:list-disc [&_ol_li]:list-decimal [&_p]:text-sm [&_p]:text-muted-foreground [&_pre]:overflow-hidden [&_pre]:rounded [&_pre]:bg-muted [&_pre]:p-2 [&_pre]:text-xs [&_ul_li]:list-disc"
-          dangerouslySetInnerHTML={{ __html: expert.description }}
-        />
+      {plain ? (
+        /* Plain-text preview, clipped to 3 lines. The Copy button above
+         * still copies the full description. */
+        <p className="line-clamp-3 text-sm text-muted-foreground">{plain}</p>
       ) : (
         <p className="text-sm italic text-muted-foreground">No description.</p>
       )}

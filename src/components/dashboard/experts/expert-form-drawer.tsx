@@ -190,9 +190,28 @@ export function hasTextContent(html: string): boolean {
   return Boolean(container.textContent?.trim());
 }
 
-/** Plain text of a rich HTML string — for card previews + clipping. */
+/** Block-level tags whose boundaries become line breaks in the plain text. */
+const BLOCK_TAGS =
+  "address,article,aside,blockquote,div,dl,dt,dd,fieldset,figcaption,figure,footer,form,h1,h2,h3,h4,h5,h6,header,hr,li,main,nav,ol,p,pre,section,table,tr,ul";
+
+/** Plain text of a rich HTML string — for card previews + clipping.
+ *  Block boundaries and `<br>` become newlines so the copied text keeps
+ *  its line structure. */
 export function htmlToPlainText(html: string): string {
+  // The card only renders once data is client-side, but keep this safe if
+  // it is ever called during SSR.
+  if (typeof document === "undefined") {
+    return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  }
+
   const container = document.createElement("div");
   container.innerHTML = html;
-  return container.textContent ?? "";
+
+  container.querySelectorAll("br").forEach((br) => br.replaceWith("\n"));
+  container.querySelectorAll(BLOCK_TAGS).forEach((el) => el.append("\n"));
+
+  return (container.textContent ?? "")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
